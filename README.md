@@ -8,7 +8,29 @@ Prinsip: **CODING = ENGINE, DATABASE + CONFIGURATION = RULES.** Dokumen arsitekt
 
 ## Status
 
-Phase 1 (project foundation). Belum ada tabel, auth, atau fitur. Itu dimulai di Phase 2.
+Phase 2 (schema, auth, role): tabel `profiles`, helper RLS, login/logout, guard role, tes RLS.
+Tabel akademik dimulai di Phase 3-4.
+
+## Setup Supabase (sekali di awal)
+
+1. Buat project Supabase. Di **Authentication > Sign In / Providers**, **matikan "Allow new users to sign up"**. Akun dibuat oleh admin, bukan pendaftaran publik.
+2. Terapkan migrasi di `supabase/migrations/` secara berurutan: `supabase db push` (Supabase CLI), atau tempel isi file SQL ke **SQL Editor**.
+3. Buat user admin pertama: **Authentication > Users > Add user** (centang auto-confirm). Trigger otomatis membuat profile berstatus **tutor + nonaktif**.
+4. Jadikan user itu admin lewat **SQL Editor** (konteks tepercaya, `auth.uid()` NULL, jadi diizinkan):
+
+   ```sql
+   update public.profiles
+   set role = 'admin', is_active = true, full_name = 'Nama Admin'
+   where id = (select id from auth.users where email = 'email-admin@contoh.com');
+   ```
+
+5. Login di `/login`. Admin masuk ke `/admin`, tutor ke `/tutor`.
+
+Role sengaja TIDAK diambil dari `user_metadata`. Hanya `profiles.role` yang dipercaya.
+
+## Tes RLS
+
+`supabase/tests/profiles_rls.test.sql` berisi 20 kasus (anon, tutor, user nonaktif, admin, eskalasi role, admin aktif terakhir). Jalankan seluruh file di SQL Editor pada project **dev/scratch** atau lewat `psql`; semua perubahan di-rollback. Hasil yang benar: NOTICE `PASS ...` untuk tiap kasus dan `SEMUA TES LULUS` di akhir. Tes ini wajib dijalankan ulang setiap ada perubahan policy atau tabel baru.
 
 ## Menjalankan lokal
 
@@ -18,7 +40,7 @@ cp .env.example .env.local   # isi nilai Supabase Anda
 npm run dev                  # http://localhost:3000
 ```
 
-Cek deployment: `GET /api/health` mengembalikan `{ "status": "ok", "phase": 1 }`.
+Cek deployment: `GET /api/health` mengembalikan `{ "status": "ok", "phase": 2 }`.
 
 ## Perintah
 
@@ -43,13 +65,14 @@ src/
     simulator/    simulator                    [engine murni]
     payroll/      kalkulasi payroll            [engine murni]
     supabase/     client browser & server
-    auth/         guard role (Phase 2)
+    auth/         role, profile, sesi, guard requireRole()
     sheets/       sinkronisasi DB -> Google Sheets
     env.ts        validasi environment (Zod)
   server/         use-case / server actions per domain
 supabase/
   migrations/     migrasi SQL berurutan
   seed/           seed data awal
+  tests/          tes RLS (SQL)
 docs/phase-0/     requirement lock, arsitektur, skema, security
 ```
 

@@ -1,4 +1,5 @@
 import { requireRole } from "@/lib/auth/session";
+import { AdminNav } from "@/components/admin-nav";
 import { SignOutButton } from "@/components/sign-out-button";
 
 export default async function AdminLayout({
@@ -15,7 +16,12 @@ export default async function AdminLayout({
           <SignOutButton />
         </div>
       </header>
-      {children}
+      <div className="flex flex-col gap-6 px-6 py-6 md:flex-row">
+        <aside className="md:w-44 md:shrink-0">
+          <AdminNav />
+        </aside>
+        <div className="min-w-0 flex-1">{children}</div>
+      </div>
     </div>
   );
 }

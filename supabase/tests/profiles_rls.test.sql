@@ -34,6 +34,16 @@ update public.profiles set role = 'admin', is_active = true
 update public.profiles set is_active = true
   where id in ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000b2');
 
+-- Isolasi: nonaktifkan SEMUA profile lain (akun asli yang sudah ada di database) selama tes,
+-- supaya hasil tes tidak bergantung pada isi database. Ikut di-rollback di akhir.
+-- (Aman terhadap guard "admin terakhir": admin fixture a1 dan a2 sudah aktif di atas.)
+update public.profiles set is_active = false
+  where id not in (
+    '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000a2',
+    '00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000b2',
+    '00000000-0000-0000-0000-0000000000c1'
+  );
+
 -- 02: anon tidak punya akses ke tabel.
 do $$
 declare ok boolean := false;
@@ -172,8 +182,14 @@ begin
   select public.is_admin() into adm;
   assert adm = true, 'admin1 harus terdeteksi admin';
 
-  select count(*) into n from public.profiles;
-  assert n = 5, format('admin harus melihat semua 5 baris, dapat %s', n);
+  -- Hitung hanya baris fixture: database bisa berisi akun asli lain yang juga terlihat admin.
+  select count(*) into n from public.profiles
+    where id in (
+      '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000a2',
+      '00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000b2',
+      '00000000-0000-0000-0000-0000000000c1'
+    );
+  assert n = 5, format('admin harus melihat semua 5 baris fixture, dapat %s', n);
   raise notice 'PASS 15 admin melihat semua profile';
 
   update public.profiles set role = 'admin' where id = '00000000-0000-0000-0000-0000000000b2';

@@ -8,8 +8,11 @@ Prinsip: **CODING = ENGINE, DATABASE + CONFIGURATION = RULES.** Dokumen arsitekt
 
 ## Status
 
-Phase 2 (schema, auth, role): tabel `profiles`, helper RLS, login/logout, guard role, tes RLS.
-Tabel akademik dimulai di Phase 3-4.
+- Phase 2 (schema, auth, role): tabel `profiles`, helper RLS, login/logout, guard role, tes RLS.
+- Phase 3 (master data): subtes, ruangan, slot sesi harian, dan hari aktif, lengkap dengan halaman admin
+  (`/admin/subtes`, `/admin/ruangan`, `/admin/kalender`), RLS, seed, dan tes.
+
+Tabel program, tipe kelas, rombel, dan siswa dimulai di Phase 4.
 
 ## Setup Supabase (sekali di awal)
 
@@ -28,9 +31,27 @@ Tabel akademik dimulai di Phase 3-4.
 
 Role sengaja TIDAK diambil dari `user_metadata`. Hanya `profiles.role` yang dipercaya.
 
+## Setup master data (Phase 3)
+
+Jalankan di **SQL Editor** Supabase, berurutan, masing-masing sekali:
+
+1. `supabase/migrations/20261004110000_create_master_data.sql` (membuat tabel, RLS, dan 7 baris hari aktif).
+2. `supabase/seed/001_master_data.sql` (data awal: 7 subtes, 15 ruangan, 8 slot sesi). Aman dijalankan ulang: tiap tabel hanya diisi bila masih kosong, jadi data yang sudah Anda ubah lewat aplikasi tidak ditimpa.
+
+Daftar ruangan awal BELUM final; tambahkan ruangan lain di `/admin/ruangan`. Aturan jeda antar sesi belum ditentukan, jadi slot dibuat bersebelahan.
+
+Aturan penting master data: tidak ada penghapusan (hanya nonaktifkan lewat kolom Status), hanya admin yang dapat mengubah, tutor hanya dapat membaca, dan slot sesi aktif tidak boleh tumpang tindih (dijaga langsung oleh database).
+
 ## Tes RLS
 
-`supabase/tests/profiles_rls.test.sql` berisi 20 kasus (anon, tutor, user nonaktif, admin, eskalasi role, admin aktif terakhir). Jalankan seluruh file di SQL Editor pada project **dev/scratch** atau lewat `psql`; semua perubahan di-rollback. Hasil yang benar: NOTICE `PASS ...` untuk tiap kasus dan `SEMUA TES LULUS` di akhir. Tes ini wajib dijalankan ulang setiap ada perubahan policy atau tabel baru.
+File di `supabase/tests/`:
+
+| File | Cakupan |
+|---|---|
+| `profiles_rls.test.sql` | 20 kasus Phase 2: anon, tutor, user nonaktif, admin, eskalasi role, admin aktif terakhir |
+| `master_data_rls.test.sql` | 17 kelompok kasus Phase 3: akses per peran, tidak ada DELETE, constraint (kode, kapasitas, durasi), tumpang tindih slot, `set_active_days()` |
+
+Jalankan seluruh isi file di SQL Editor pada project **dev/scratch** atau lewat `psql`. Semua perubahan di-rollback, dan tes tidak bergantung pada isi database (akun dan data yang sudah ada tidak mengganggu). Hasil yang benar: tidak ada error merah. Di `psql` terlihat NOTICE `PASS ...` per kasus dan `SEMUA TES LULUS` di akhir; SQL Editor Supabase mungkin tidak menampilkan NOTICE, jadi ketiadaan error sudah berarti lulus. Jika ada kasus yang gagal, pesan error menyebut kasusnya. Tes ini wajib dijalankan ulang setiap ada perubahan policy atau tabel baru.
 
 ## Menjalankan lokal
 
@@ -40,7 +61,7 @@ cp .env.example .env.local   # isi nilai Supabase Anda
 npm run dev                  # http://localhost:3000
 ```
 
-Cek deployment: `GET /api/health` mengembalikan `{ "status": "ok", "phase": 2 }`.
+Cek deployment: `GET /api/health` mengembalikan `{ "status": "ok", "phase": 3 }`.
 
 ## Perintah
 
@@ -66,9 +87,12 @@ src/
     payroll/      kalkulasi payroll            [engine murni]
     supabase/     client browser & server
     auth/         role, profile, sesi, guard requireRole()
+    master-data/  skema Zod, helper waktu/kapasitas, pemetaan error DB (murni, ber-tes)
     sheets/       sinkronisasi DB -> Google Sheets
     env.ts        validasi environment (Zod)
+  components/     komponen UI bersama (ActionForm, AdminNav)
   server/         use-case / server actions per domain
+    master-data/  queries + server actions subtes, ruangan, slot, hari aktif
 supabase/
   migrations/     migrasi SQL berurutan
   seed/           seed data awal

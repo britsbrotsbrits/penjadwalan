@@ -17,7 +17,10 @@ export type MasterEntity =
   | "program"
   | "tipe kelas"
   | "rombel"
-  | "siswa";
+  | "siswa"
+  | "tutor"
+  | "kompetensi"
+  | "availability";
 
 const GENERIC = "Terjadi kesalahan saat menyimpan data. Coba lagi.";
 
@@ -95,6 +98,22 @@ const BY_CONSTRAINT: ReadonlyArray<{ constraint: string; message: string }> = [
     message: "Rombel tujuan tidak ada atau sudah nonaktif.",
   },
   { constraint: "students_same_rombel", message: "Siswa sudah berada di rombel tersebut." },
+
+  // Tutor (Phase 5)
+  { constraint: "tutor_profiles_level_range", message: "Level harus antara 0 dan 99." },
+  {
+    constraint: "tutor_profiles_rate_range",
+    message: "Rate harus antara Rp0 dan Rp100.000.000 per sesi.",
+  },
+  { constraint: "profiles_full_name_length", message: "Nama maksimal 200 karakter." },
+  {
+    constraint: "tutor_availability_day_range",
+    message: "Hari availability harus antara 1 dan 7.",
+  },
+  {
+    constraint: "tutor_availability_slot_range",
+    message: "Nomor sesi availability harus antara 1 dan 99.",
+  },
 ];
 
 export function mapDbError(error: DbErrorLike, entity: MasterEntity): string {

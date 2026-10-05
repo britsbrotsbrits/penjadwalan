@@ -19,6 +19,14 @@ const GROUPS: ReadonlyArray<{ title: string; items: readonly NavItem[] }> = [
     ],
   },
   {
+    title: "Mentor",
+    items: [
+      { href: "/admin/mentor", label: "Daftar Mentor" },
+      { href: "/admin/kompetensi", label: "Kompetensi" },
+      { href: "/admin/availability", label: "Availability" },
+    ],
+  },
+  {
     title: "Operasional",
     items: [
       { href: "/admin/ruangan", label: "Ruangan" },

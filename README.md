@@ -14,6 +14,8 @@ Prinsip: **CODING = ENGINE, DATABASE + CONFIGURATION = RULES.** Dokumen arsitekt
 
 - Phase 4 (program, tipe kelas, rombel, siswa): hierarki Program > Tipe Kelas > Rombel > Siswa, kode siswa otomatis,
   pindah rombel dengan riwayat, halaman `/admin/program`, `/admin/tipe-kelas`, `/admin/rombel`, `/admin/siswa`.
+- Phase 5 (mentor/tutor, kompetensi, availability): `/admin/mentor`, `/admin/kompetensi`, `/admin/availability`,
+  dan `/tutor/availability` (mentor mengisi sendiri).
 
 ## Setup Supabase (sekali di awal)
 
@@ -57,6 +59,17 @@ Rombel dan siswa TIDAK di-seed: admin membuatnya lewat aplikasi. Aturan penting:
 - Pindah rombel hanya lewat fungsi `move_student()` (halaman detail siswa), sehingga riwayat (dari, ke, alasan, admin pelaku) selalu tercatat.
 - Ukuran standar tipe kelas hanya peringatan di halaman Rombel, bukan batas keras.
 
+## Setup mentor, kompetensi, availability (Phase 5)
+
+Jalankan di **SQL Editor** Supabase: `supabase/migrations/20261006100000_create_tutors.sql` (sekali). Tidak ada seed:
+mentor berasal dari akun (Authentication > Users). Setiap akun ber-role tutor otomatis mendapat satu baris data mentor
+(akun yang sudah ada diisi otomatis oleh migrasi). Aturan penting:
+
+- Akun baru: nonaktif dan **belum dapat dijadwalkan** sampai admin mengisi nama, level, rate di `/admin/mentor` dan mencentang kedua kotak.
+- `level` = peringkat seniority 0..99 (hanya preferensi lunak; bobot di konfigurasi Phase 7). `rate` = Rupiah per sesi, kosong = belum diisi.
+- Tutor hanya melihat data dan rate DIRINYA; tidak bisa mengubah level/rate/status. Kompetensi dan availability ditulis lewat fungsi database (atomik); tidak ada DELETE.
+- Availability mingguan (hari x sesi) mengikuti hari aktif dan slot aktif di menu Kalender. Sel yang belum pernah diisi dianggap TIDAK tersedia. Availability per periode ditambahkan saat tabel periode jadwal dibuat.
+
 ## Tes RLS
 
 File di `supabase/tests/`:
@@ -66,6 +79,7 @@ File di `supabase/tests/`:
 | `profiles_rls.test.sql` | 20 kasus Phase 2: anon, tutor, user nonaktif, admin, eskalasi role, admin aktif terakhir |
 | `master_data_rls.test.sql` | 17 kelompok kasus Phase 3: akses per peran, tidak ada DELETE, constraint (kode, kapasitas, durasi), tumpang tindih slot, `set_active_days()` |
 | `academic_rls.test.sql` | 17 kelompok kasus Phase 4: akses per peran, tidak ada DELETE, kolom tak bisa diubah, `move_student`, riwayat, kode siswa, constraint, view jumlah siswa |
+| `tutors_rls.test.sql` | 16 kelompok kasus Phase 5: anon, tutor A/B, tutor nonaktif, admin; isolasi rate, eskalasi, fungsi availability/kompetensi/update tutor, constraint, cascade |
 
 Jalankan seluruh isi file di SQL Editor pada project **dev/scratch** atau lewat `psql`. Semua perubahan di-rollback, dan tes tidak bergantung pada isi database (akun dan data yang sudah ada tidak mengganggu). Hasil yang benar: tidak ada error merah. Di `psql` terlihat NOTICE `PASS ...` per kasus dan `SEMUA TES LULUS` di akhir; SQL Editor Supabase mungkin tidak menampilkan NOTICE, jadi ketiadaan error sudah berarti lulus. Jika ada kasus yang gagal, pesan error menyebut kasusnya. Tes ini wajib dijalankan ulang setiap ada perubahan policy atau tabel baru.
 
@@ -77,7 +91,7 @@ cp .env.example .env.local   # isi nilai Supabase Anda
 npm run dev                  # http://localhost:3000
 ```
 
-Cek deployment: `GET /api/health` mengembalikan `{ "status": "ok", "phase": 4 }`.
+Cek deployment: `GET /api/health` mengembalikan `{ "status": "ok", "phase": 5 }`.
 
 ## Perintah
 
@@ -105,12 +119,14 @@ src/
     auth/         role, profile, sesi, guard requireRole()
     master-data/  skema Zod, helper waktu/kapasitas, pemetaan error DB (murni, ber-tes)
     academic/     skema Zod, label, tanggal, pencarian/paginasi siswa (murni, ber-tes)
+    tutors/       skema Zod, grid availability, label tutor (murni, ber-tes)
     sheets/       sinkronisasi DB -> Google Sheets
     env.ts        validasi environment (Zod)
   components/     komponen UI bersama (ActionForm, AdminNav)
   server/         use-case / server actions per domain
     master-data/  queries + server actions subtes, ruangan, slot, hari aktif
     academic/     queries + server actions program, tipe kelas, rombel, siswa
+    tutors/       queries + server actions mentor, kompetensi, availability
 supabase/
   migrations/     migrasi SQL berurutan
   seed/           seed data awal

@@ -90,6 +90,27 @@ describe("mapDbError", () => {
     }
   });
 
+  it("mengenali constraint tutor", () => {
+    expect(
+      mapDbError({ code: "23514", message: 'violates check constraint "tutor_profiles_level_range"' }, "tutor"),
+    ).toBe("Level harus antara 0 dan 99.");
+    expect(
+      mapDbError({ code: "23514", message: 'violates check constraint "tutor_profiles_rate_range"' }, "tutor"),
+    ).toBe("Rate harus antara Rp0 dan Rp100.000.000 per sesi.");
+    expect(
+      mapDbError({ code: "23514", message: 'violates check constraint "profiles_full_name_length"' }, "tutor"),
+    ).toBe("Nama maksimal 200 karakter.");
+    expect(mapDbError({ code: "23503", message: "fk subtests" }, "kompetensi")).toBe(
+      "Data terkait tidak ditemukan atau masih dipakai data lain.",
+    );
+    expect(mapDbError({ code: "P0002", message: "tutor tidak ditemukan" }, "tutor")).toBe(
+      "Data tutor tidak ditemukan.",
+    );
+    expect(mapDbError({ code: "22023", message: "bentuk sel availability tidak valid" }, "availability")).toBe(
+      "Input tidak valid.",
+    );
+  });
+
   it("mengenali token dari trigger dan RPC pemindahan siswa", () => {
     expect(
       mapDbError(

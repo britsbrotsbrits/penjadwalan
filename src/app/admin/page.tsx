@@ -8,6 +8,9 @@ const SHORTCUTS = [
   { href: "/admin/tipe-kelas", title: "Tipe Kelas", description: "Kelola tipe kelas dan ukuran standarnya." },
   { href: "/admin/rombel", title: "Rombel", description: "Kelola rombel dan pantau jumlah siswanya." },
   { href: "/admin/siswa", title: "Siswa", description: "Kelola siswa dan pindah rombel." },
+  { href: "/admin/mentor", title: "Daftar Mentor", description: "Kelola mentor, level, rate, dan status." },
+  { href: "/admin/kompetensi", title: "Kompetensi", description: "Tetapkan subtes yang boleh diajar tiap mentor." },
+  { href: "/admin/availability", title: "Availability", description: "Pantau dan isi availability mentor." },
   {
     href: "/admin/kalender",
     title: "Kalender",
@@ -24,7 +27,7 @@ export default async function AdminHomePage() {
       <div>
         <h1 className="text-2xl font-semibold">Dashboard Admin</h1>
         <p className="mt-1 text-sm opacity-70">
-          Master data, program, rombel, dan siswa tersedia. Fitur lain dibangun bertahap sesuai roadmap.
+          Master data, program, rombel, siswa, dan mentor tersedia. Fitur lain dibangun bertahap sesuai roadmap.
         </p>
       </div>
       <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

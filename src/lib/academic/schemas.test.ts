@@ -127,6 +127,14 @@ describe("rombel", () => {
     ).toBe("Tanggal mulai harus berupa tanggal yang valid (YYYY-MM-DD).");
   });
 
+  it("ruangan tetap: kosong/tidak dikirim = null, UUID valid diterima, selain itu ditolak", () => {
+    expect(rombelCreateSchema.parse({ ...base, fixedRoomId: "" }).fixedRoomId).toBeNull();
+    expect(rombelCreateSchema.parse(base).fixedRoomId).toBeNull();
+    expect(rombelCreateSchema.parse({ ...base, fixedRoomId: ID2 }).fixedRoomId).toBe(ID2);
+    expect(messageOf(rombelCreateSchema.safeParse({ ...base, fixedRoomId: "bukan-uuid" }))).toBe("ID tidak valid.");
+    expect(rombelUpdateSchema.parse({ id: ID, name: "X", fixedRoomId: ID2 }).fixedRoomId).toBe(ID2);
+  });
+
   it("update tidak membawa classTypeId", () => {
     const r = rombelUpdateSchema.parse({ id: ID, classTypeId: ID2, name: "X", startDate: "", endDate: "" });
     expect("classTypeId" in r).toBe(false);

@@ -54,7 +54,7 @@ export async function listRombels(): Promise<Rombel[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("rombels")
-    .select("id, class_type_id, name, start_date, end_date, is_active")
+    .select("id, class_type_id, name, start_date, end_date, fixed_room_id, is_active")
     .order("name", { ascending: true });
   if (error) throw loadFailed("rombel");
   return z.array(rombelRowSchema).parse(data ?? []);

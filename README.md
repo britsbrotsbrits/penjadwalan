@@ -16,6 +16,7 @@ Prinsip: **CODING = ENGINE, DATABASE + CONFIGURATION = RULES.** Dokumen arsitekt
   pindah rombel dengan riwayat, halaman `/admin/program`, `/admin/tipe-kelas`, `/admin/rombel`, `/admin/siswa`.
 - Phase 5 (mentor/tutor, kompetensi, availability): `/admin/mentor`, `/admin/kompetensi`, `/admin/availability`,
   dan `/tutor/availability` (mentor mengisi sendiri).
+- Phase 6 (ruangan tetap): setiap rombel boleh punya ruangan tetap (`/admin/rombel`), ringkasan pemakaian di `/admin/ruangan`.
 
 ## Setup Supabase (sekali di awal)
 
@@ -70,6 +71,15 @@ mentor berasal dari akun (Authentication > Users). Setiap akun ber-role tutor ot
 - Tutor hanya melihat data dan rate DIRINYA; tidak bisa mengubah level/rate/status. Kompetensi dan availability ditulis lewat fungsi database (atomik); tidak ada DELETE.
 - Availability mingguan (hari x sesi) mengikuti hari aktif dan slot aktif di menu Kalender. Sel yang belum pernah diisi dianggap TIDAK tersedia. Availability per periode ditambahkan saat tabel periode jadwal dibuat.
 
+## Setup ruangan tetap (Phase 6)
+
+Jalankan di **SQL Editor** Supabase: `supabase/migrations/20261007100000_add_rombel_fixed_room.sql` (sekali). Tidak ada seed.
+
+- Ruangan tetap bersifat opsional per rombel. Saat dipilih, ruangan harus ada dan aktif (dijaga database).
+- Beberapa rombel boleh memakai ruangan yang sama (DEC-03); bentrok waktu tetap hard constraint di penjadwalan.
+- Kapasitas TIDAK dipaksa database. UI memperingatkan bila kapasitas kurang dari siswa aktif (atau dari ukuran standar tipe kelas bila belum ada siswa, DEC-02). Validator penjadwalan kelak memperlakukannya sebagai hard constraint.
+- Ruangan yang dinonaktifkan tidak diblokir walau dipakai rombel; rombelnya diberi peringatan dan tetap bisa diedit.
+
 ## Tes RLS
 
 File di `supabase/tests/`:
@@ -80,6 +90,7 @@ File di `supabase/tests/`:
 | `master_data_rls.test.sql` | 17 kelompok kasus Phase 3: akses per peran, tidak ada DELETE, constraint (kode, kapasitas, durasi), tumpang tindih slot, `set_active_days()` |
 | `academic_rls.test.sql` | 17 kelompok kasus Phase 4: akses per peran, tidak ada DELETE, kolom tak bisa diubah, `move_student`, riwayat, kode siswa, constraint, view jumlah siswa |
 | `tutors_rls.test.sql` | 16 kelompok kasus Phase 5: anon, tutor A/B, tutor nonaktif, admin; isolasi rate, eskalasi, fungsi availability/kompetensi/update tutor, constraint, cascade |
+| `fixed_room.test.sql` | 7 kelompok kasus Phase 6: ruangan tetap harus aktif, ganti/kosongkan, berbagi ruangan, kapasitas tidak dipaksa, ruangan dinonaktifkan, tanpa DELETE, tutor/anon |
 
 Jalankan seluruh isi file di SQL Editor pada project **dev/scratch** atau lewat `psql`. Semua perubahan di-rollback, dan tes tidak bergantung pada isi database (akun dan data yang sudah ada tidak mengganggu). Hasil yang benar: tidak ada error merah. Di `psql` terlihat NOTICE `PASS ...` per kasus dan `SEMUA TES LULUS` di akhir; SQL Editor Supabase mungkin tidak menampilkan NOTICE, jadi ketiadaan error sudah berarti lulus. Jika ada kasus yang gagal, pesan error menyebut kasusnya. Tes ini wajib dijalankan ulang setiap ada perubahan policy atau tabel baru.
 
@@ -91,7 +102,7 @@ cp .env.example .env.local   # isi nilai Supabase Anda
 npm run dev                  # http://localhost:3000
 ```
 
-Cek deployment: `GET /api/health` mengembalikan `{ "status": "ok", "phase": 5 }`.
+Cek deployment: `GET /api/health` mengembalikan `{ "status": "ok", "phase": 6 }`.
 
 ## Perintah
 
@@ -120,6 +131,7 @@ src/
     master-data/  skema Zod, helper waktu/kapasitas, pemetaan error DB (murni, ber-tes)
     academic/     skema Zod, label, tanggal, pencarian/paginasi siswa (murni, ber-tes)
     tutors/       skema Zod, grid availability, label tutor (murni, ber-tes)
+    rooms/        analisis ruangan tetap vs kapasitas (murni, ber-tes)
     sheets/       sinkronisasi DB -> Google Sheets
     env.ts        validasi environment (Zod)
   components/     komponen UI bersama (ActionForm, AdminNav)

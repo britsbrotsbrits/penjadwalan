@@ -116,7 +116,7 @@ export async function updateRoomAction(_prev: FormState, formData: FormData): Pr
   const parsed = roomUpdateSchema.safeParse(formToRecord(formData));
   if (!parsed.success) return fail(firstIssueMessage(parsed.error));
   const { id, ...v } = parsed.data;
-  return updateRow(
+  const result = await updateRow(
     "rooms",
     id,
     { name: v.name, capacity: v.capacity, is_active: v.isActive },
@@ -124,6 +124,9 @@ export async function updateRoomAction(_prev: FormState, formData: FormData): Pr
     "/admin/ruangan",
     "Tersimpan.",
   );
+  // Kapasitas/status ruangan memengaruhi peringatan ruangan tetap di halaman rombel.
+  if (result.status === "success") revalidatePath("/admin/rombel");
+  return result;
 }
 
 // ---------------------------------------------------------------- slot sesi

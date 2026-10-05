@@ -4,14 +4,40 @@ import { createRowClass, headerCellClass, inputClass, rowClass } from "@/compone
 import { summarizeCapacity } from "@/lib/master-data/capacity";
 import { createRoomAction, updateRoomAction } from "@/server/master-data/actions";
 import { listRooms } from "@/server/master-data/queries";
+import { buildRombelLabels } from "@/lib/academic/labels";
+import { analyzeFixedRooms } from "@/lib/rooms/fixed-room";
+import {
+  listClassTypes,
+  listPrograms,
+  listRombelCounts,
+  listRombels,
+} from "@/server/academic/queries";
 
 const GRID = "grid-cols-[minmax(12rem,1fr)_8rem_5rem_auto]";
 
 export default async function RuanganPage() {
   await requireRole(["admin"]);
-  const rooms = await listRooms();
+  const [rooms, programs, classTypes, rombels, counts] = await Promise.all([
+    listRooms(),
+    listPrograms(),
+    listClassTypes(),
+    listRombels(),
+    listRombelCounts(),
+  ]);
   const activeCount = rooms.filter((room) => room.isActive).length;
   const groups = summarizeCapacity(rooms);
+
+  // Pemakaian sebagai ruangan tetap (hanya rombel aktif).
+  const rombelLabels = buildRombelLabels(programs, classTypes, rombels);
+  const analysis = analyzeFixedRooms({
+    rombels,
+    rooms,
+    classTypes,
+    counts: counts.map((c) => ({ rombelId: c.rombelId, activeStudents: c.activeStudents })),
+  });
+  const usage = rooms
+    .map((room) => ({ room, rombelIds: analysis.byRoom.get(room.id) ?? [] }))
+    .filter((u) => u.rombelIds.length > 0);
 
   return (
     <main className="flex flex-col gap-6">
@@ -38,6 +64,54 @@ export default async function RuanganPage() {
           </ul>
         ) : null}
       </section>
+
+      {usage.length > 0 ? (
+        <section aria-labelledby="ruangan-tetap" className="rounded border border-current/20 p-4">
+          <h2 id="ruangan-tetap" className="mb-1 font-medium">
+            Dipakai sebagai ruangan tetap
+          </h2>
+          <p className="mb-3 text-sm opacity-70">
+            Ruangan yang ditetapkan untuk rombel aktif (diatur di halaman Rombel). Beberapa rombel boleh
+            berbagi satu ruangan, tetapi tidak boleh bentrok waktu saat dijadwalkan. Menonaktifkan ruangan
+            yang dipakai di sini tidak diblokir, tetapi rombelnya perlu dipindahkan ke ruangan lain.
+          </p>
+          <ul className="flex flex-col gap-2 text-sm">
+            {usage.map(({ room, rombelIds }) => (
+              <li key={room.id} className="rounded border border-current/10 p-2">
+                <p className="font-medium">
+                  {room.name} ({room.capacity} kursi)
+                  {room.isActive ? "" : <span className="ml-2 text-red-600">Nonaktif, ganti ruangan rombel di bawah</span>}
+                  {rombelIds.length >= 2 ? (
+                    <span className="ml-2 text-xs font-normal text-amber-600">
+                      Dibagi {rombelIds.length} rombel: pastikan waktunya tidak bentrok
+                    </span>
+                  ) : null}
+                </p>
+                <ul className="mt-1 list-disc pl-5">
+                  {rombelIds.map((id) => {
+                    const issues = (analysis.byRombel.get(id)?.issues ?? []).filter(
+                      (i) => i.code === "ROOM_TOO_SMALL",
+                    );
+                    return (
+                      <li key={id}>
+                        {rombelLabels.get(id) ?? "?"}
+                        {issues.map((i) => (
+                          <span
+                            key={i.code}
+                            className={`ml-2 text-xs ${i.severity === "error" ? "text-red-600" : "text-amber-600"}`}
+                          >
+                            {i.message}
+                          </span>
+                        ))}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section aria-labelledby="tambah-ruangan" className="rounded border border-current/20 p-4">
         <h2 id="tambah-ruangan" className="mb-3 font-medium">

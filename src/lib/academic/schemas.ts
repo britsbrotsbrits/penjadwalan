@@ -44,8 +44,15 @@ export const classTypeUpdateSchema = z.object({ id: idSchema, ...classTypeFields
 
 // ---------------------------------------------------------------- rombel
 
+// Ruangan tetap opsional: kosong -> null (tanpa ruangan tetap).
+const optionalRoomId = z.preprocess(
+  (v) => (v === undefined || v === null || (typeof v === "string" && v.trim() === "") ? null : v),
+  idSchema.nullable(),
+);
+
 const rombelFields = {
   name: textName("Nama rombel"),
+  fixedRoomId: optionalRoomId,
   startDate: optionalDate("Tanggal mulai"),
   endDate: optionalDate("Tanggal selesai"),
   isActive: checkbox,
@@ -154,6 +161,7 @@ export const rombelRowSchema = z
     name: z.string(),
     start_date: z.string().nullable(),
     end_date: z.string().nullable(),
+    fixed_room_id: z.string().uuid().nullable(),
     is_active: z.boolean(),
   })
   .transform((r) => ({
@@ -162,6 +170,7 @@ export const rombelRowSchema = z
     name: r.name,
     startDate: r.start_date,
     endDate: r.end_date,
+    fixedRoomId: r.fixed_room_id,
     isActive: r.is_active,
   }));
 export type Rombel = z.output<typeof rombelRowSchema>;

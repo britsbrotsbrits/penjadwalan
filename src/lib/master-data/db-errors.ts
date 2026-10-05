@@ -97,6 +97,11 @@ const BY_CONSTRAINT: ReadonlyArray<{ constraint: string; message: string }> = [
     constraint: "students_target_rombel_active",
     message: "Rombel tujuan tidak ada atau sudah nonaktif.",
   },
+  {
+    constraint: "rombels_fixed_room_active",
+    message: "Ruangan tetap tidak ada atau sudah nonaktif.",
+  },
+  { constraint: "rombels_fixed_room_id_fkey", message: "Ruangan tetap tidak ditemukan." },
   { constraint: "students_same_rombel", message: "Siswa sudah berada di rombel tersebut." },
 
   // Tutor (Phase 5)

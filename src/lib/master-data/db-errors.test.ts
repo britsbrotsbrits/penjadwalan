@@ -90,6 +90,15 @@ describe("mapDbError", () => {
     }
   });
 
+  it("mengenali kesalahan ruangan tetap rombel", () => {
+    expect(
+      mapDbError({ code: "23514", message: "rombels_fixed_room_active: ruangan tetap tidak ada atau tidak aktif" }, "rombel"),
+    ).toBe("Ruangan tetap tidak ada atau sudah nonaktif.");
+    expect(
+      mapDbError({ code: "23503", message: 'violates foreign key constraint "rombels_fixed_room_id_fkey"' }, "rombel"),
+    ).toBe("Ruangan tetap tidak ditemukan.");
+  });
+
   it("mengenali constraint tutor", () => {
     expect(
       mapDbError({ code: "23514", message: 'violates check constraint "tutor_profiles_level_range"' }, "tutor"),

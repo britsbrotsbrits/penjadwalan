@@ -158,10 +158,11 @@ export async function createRombelAction(_prev: FormState, formData: FormData): 
       name: v.name,
       start_date: v.startDate,
       end_date: v.endDate,
+      fixed_room_id: v.fixedRoomId,
       is_active: v.isActive,
     },
     "rombel",
-    STRUCTURE_PATHS,
+    [...STRUCTURE_PATHS, "/admin/ruangan"],
     "Rombel ditambahkan.",
   );
 }
@@ -174,9 +175,15 @@ export async function updateRombelAction(_prev: FormState, formData: FormData): 
   return updateRow(
     "rombels",
     id,
-    { name: v.name, start_date: v.startDate, end_date: v.endDate, is_active: v.isActive },
+    {
+      name: v.name,
+      start_date: v.startDate,
+      end_date: v.endDate,
+      fixed_room_id: v.fixedRoomId,
+      is_active: v.isActive,
+    },
     "rombel",
-    STRUCTURE_PATHS,
+    [...STRUCTURE_PATHS, "/admin/ruangan"],
     "Tersimpan.",
   );
 }

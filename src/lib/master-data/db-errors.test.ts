@@ -75,6 +75,48 @@ describe("mapDbError", () => {
     );
   });
 
+  it("mengenali constraint struktur akademik", () => {
+    const cases: Array<[string, string, Parameters<typeof mapDbError>[1], string]> = [
+      ["23505", "programs_name_lower_key", "program", "Nama program sudah dipakai."],
+      ["23505", "class_types_program_name_key", "tipe kelas", "Nama tipe kelas sudah dipakai di program ini."],
+      ["23505", "rombels_class_type_name_key", "rombel", "Nama rombel sudah dipakai di tipe kelas ini."],
+      ["23505", "students_student_code_key", "siswa", "Kode siswa sudah dipakai."],
+      ["23514", "class_types_default_size_range", "tipe kelas", "Ukuran standar harus antara 1 dan 500."],
+      ["23514", "rombels_dates_order", "rombel", "Tanggal selesai tidak boleh sebelum tanggal mulai."],
+      ["23514", "students_student_code_format", "siswa", "Kode siswa hanya boleh huruf besar, angka, titik, garis bawah, dan strip (maksimal 30 karakter)."],
+    ];
+    for (const [code, constraint, entity, expected] of cases) {
+      expect(mapDbError({ code, message: `violates constraint "${constraint}"` }, entity)).toBe(expected);
+    }
+  });
+
+  it("mengenali token dari trigger dan RPC pemindahan siswa", () => {
+    expect(
+      mapDbError(
+        { code: "23514", message: "students_target_rombel_active: rombel tujuan tidak ada atau tidak aktif" },
+        "siswa",
+      ),
+    ).toBe("Rombel tujuan tidak ada atau sudah nonaktif.");
+    expect(
+      mapDbError(
+        { code: "23514", message: "students_same_rombel: siswa sudah berada di rombel tersebut" },
+        "siswa",
+      ),
+    ).toBe("Siswa sudah berada di rombel tersebut.");
+  });
+
+  it("fallback untuk FK, input tidak valid, dan data tidak ditemukan", () => {
+    expect(mapDbError({ code: "23503", message: "fk" }, "rombel")).toBe(
+      "Data terkait tidak ditemukan atau masih dipakai data lain.",
+    );
+    expect(mapDbError({ code: "22023", message: "alasan maksimal 500 karakter" }, "siswa")).toBe(
+      "Input tidak valid.",
+    );
+    expect(mapDbError({ code: "P0002", message: "siswa tidak ditemukan" }, "siswa")).toBe(
+      "Data siswa tidak ditemukan.",
+    );
+  });
+
   it("tidak pernah membocorkan pesan mentah database", () => {
     const message = mapDbError(
       { code: "XX000", message: "relation public.secret_table does not exist" },

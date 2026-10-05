@@ -12,7 +12,8 @@ Prinsip: **CODING = ENGINE, DATABASE + CONFIGURATION = RULES.** Dokumen arsitekt
 - Phase 3 (master data): subtes, ruangan, slot sesi harian, dan hari aktif, lengkap dengan halaman admin
   (`/admin/subtes`, `/admin/ruangan`, `/admin/kalender`), RLS, seed, dan tes.
 
-Tabel program, tipe kelas, rombel, dan siswa dimulai di Phase 4.
+- Phase 4 (program, tipe kelas, rombel, siswa): hierarki Program > Tipe Kelas > Rombel > Siswa, kode siswa otomatis,
+  pindah rombel dengan riwayat, halaman `/admin/program`, `/admin/tipe-kelas`, `/admin/rombel`, `/admin/siswa`.
 
 ## Setup Supabase (sekali di awal)
 
@@ -42,6 +43,20 @@ Daftar ruangan awal BELUM final; tambahkan ruangan lain di `/admin/ruangan`. Atu
 
 Aturan penting master data: tidak ada penghapusan (hanya nonaktifkan lewat kolom Status), hanya admin yang dapat mengubah, tutor hanya dapat membaca, dan slot sesi aktif tidak boleh tumpang tindih (dijaga langsung oleh database).
 
+## Setup program, tipe kelas, rombel, siswa (Phase 4)
+
+Jalankan di **SQL Editor** Supabase, berurutan, masing-masing sekali:
+
+1. `supabase/migrations/20261005100000_create_academic_structure.sql` (5 tabel, trigger, fungsi `move_student`, view jumlah siswa, RLS).
+2. `supabase/seed/002_programs_class_types.sql` (4 program dan 14 tipe kelas awal). Aman dijalankan ulang.
+
+Rombel dan siswa TIDAK di-seed: admin membuatnya lewat aplikasi. Aturan penting:
+
+- Hanya admin yang dapat membaca/menulis rombel, siswa, dan riwayat. Tutor hanya dapat membaca program dan tipe kelas.
+- Tidak ada penghapusan (nonaktifkan lewat Status). `program_id` tipe kelas, `class_type_id` rombel, dan `rombel_id` siswa tidak dapat diubah lewat UPDATE biasa.
+- Pindah rombel hanya lewat fungsi `move_student()` (halaman detail siswa), sehingga riwayat (dari, ke, alasan, admin pelaku) selalu tercatat.
+- Ukuran standar tipe kelas hanya peringatan di halaman Rombel, bukan batas keras.
+
 ## Tes RLS
 
 File di `supabase/tests/`:
@@ -50,6 +65,7 @@ File di `supabase/tests/`:
 |---|---|
 | `profiles_rls.test.sql` | 20 kasus Phase 2: anon, tutor, user nonaktif, admin, eskalasi role, admin aktif terakhir |
 | `master_data_rls.test.sql` | 17 kelompok kasus Phase 3: akses per peran, tidak ada DELETE, constraint (kode, kapasitas, durasi), tumpang tindih slot, `set_active_days()` |
+| `academic_rls.test.sql` | 17 kelompok kasus Phase 4: akses per peran, tidak ada DELETE, kolom tak bisa diubah, `move_student`, riwayat, kode siswa, constraint, view jumlah siswa |
 
 Jalankan seluruh isi file di SQL Editor pada project **dev/scratch** atau lewat `psql`. Semua perubahan di-rollback, dan tes tidak bergantung pada isi database (akun dan data yang sudah ada tidak mengganggu). Hasil yang benar: tidak ada error merah. Di `psql` terlihat NOTICE `PASS ...` per kasus dan `SEMUA TES LULUS` di akhir; SQL Editor Supabase mungkin tidak menampilkan NOTICE, jadi ketiadaan error sudah berarti lulus. Jika ada kasus yang gagal, pesan error menyebut kasusnya. Tes ini wajib dijalankan ulang setiap ada perubahan policy atau tabel baru.
 
@@ -61,7 +77,7 @@ cp .env.example .env.local   # isi nilai Supabase Anda
 npm run dev                  # http://localhost:3000
 ```
 
-Cek deployment: `GET /api/health` mengembalikan `{ "status": "ok", "phase": 3 }`.
+Cek deployment: `GET /api/health` mengembalikan `{ "status": "ok", "phase": 4 }`.
 
 ## Perintah
 
@@ -88,11 +104,13 @@ src/
     supabase/     client browser & server
     auth/         role, profile, sesi, guard requireRole()
     master-data/  skema Zod, helper waktu/kapasitas, pemetaan error DB (murni, ber-tes)
+    academic/     skema Zod, label, tanggal, pencarian/paginasi siswa (murni, ber-tes)
     sheets/       sinkronisasi DB -> Google Sheets
     env.ts        validasi environment (Zod)
   components/     komponen UI bersama (ActionForm, AdminNav)
   server/         use-case / server actions per domain
     master-data/  queries + server actions subtes, ruangan, slot, hari aktif
+    academic/     queries + server actions program, tipe kelas, rombel, siswa
 supabase/
   migrations/     migrasi SQL berurutan
   seed/           seed data awal

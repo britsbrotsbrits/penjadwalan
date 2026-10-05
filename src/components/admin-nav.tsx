@@ -10,6 +10,15 @@ const GROUPS: ReadonlyArray<{ title: string; items: readonly NavItem[] }> = [
   { title: "Dashboard", items: [{ href: "/admin", label: "Dashboard", exact: true }] },
   { title: "Akademik", items: [{ href: "/admin/subtes", label: "Subtes" }] },
   {
+    title: "Program & Kelas",
+    items: [
+      { href: "/admin/program", label: "Program" },
+      { href: "/admin/tipe-kelas", label: "Tipe Kelas" },
+      { href: "/admin/rombel", label: "Rombel" },
+      { href: "/admin/siswa", label: "Siswa" },
+    ],
+  },
+  {
     title: "Operasional",
     items: [
       { href: "/admin/ruangan", label: "Ruangan" },

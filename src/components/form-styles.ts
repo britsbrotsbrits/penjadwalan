@@ -12,3 +12,6 @@ export const rowClass =
 
 // Baris form "tambah data" (di dalam kotak sendiri, tanpa garis bawah).
 export const createRowClass = "grid items-center gap-3";
+
+export const selectClass =
+  "w-full rounded border border-current/30 bg-transparent px-2 py-1 text-sm";

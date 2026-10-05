@@ -4,6 +4,10 @@ import { requireRole } from "@/lib/auth/session";
 const SHORTCUTS = [
   { href: "/admin/subtes", title: "Subtes", description: "Kelola daftar subtes dan urutannya." },
   { href: "/admin/ruangan", title: "Ruangan", description: "Kelola ruangan dan kapasitasnya." },
+  { href: "/admin/program", title: "Program", description: "Kelola program (Kelas 3 SMA, Gap Year, dst)." },
+  { href: "/admin/tipe-kelas", title: "Tipe Kelas", description: "Kelola tipe kelas dan ukuran standarnya." },
+  { href: "/admin/rombel", title: "Rombel", description: "Kelola rombel dan pantau jumlah siswanya." },
+  { href: "/admin/siswa", title: "Siswa", description: "Kelola siswa dan pindah rombel." },
   {
     href: "/admin/kalender",
     title: "Kalender",
@@ -20,7 +24,7 @@ export default async function AdminHomePage() {
       <div>
         <h1 className="text-2xl font-semibold">Dashboard Admin</h1>
         <p className="mt-1 text-sm opacity-70">
-          Master data tersedia. Fitur lain dibangun bertahap sesuai roadmap.
+          Master data, program, rombel, dan siswa tersedia. Fitur lain dibangun bertahap sesuai roadmap.
         </p>
       </div>
       <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

@@ -7,7 +7,7 @@ import { endsSameDay, normalizeTime, parseTime, slotEndTime } from "./time";
  * database tetap menjadi pertahanan terakhir.
  */
 
-const intField = (label: string, min: number, max: number) =>
+export const intField = (label: string, min: number, max: number) =>
   z.coerce
     .number({ invalid_type_error: `${label} harus berupa angka.` })
     .int(`${label} harus berupa bilangan bulat.`)
@@ -15,9 +15,9 @@ const intField = (label: string, min: number, max: number) =>
     .max(max, `${label} maksimal ${max}.`);
 
 // Checkbox HTML: dikirim "on" bila dicentang, tidak dikirim sama sekali bila tidak.
-const checkbox = z.preprocess((v) => v === "on" || v === "true" || v === true, z.boolean());
+export const checkbox = z.preprocess((v) => v === "on" || v === "true" || v === true, z.boolean());
 
-const textName = (label: string) =>
+export const textName = (label: string) =>
   z
     .string({ required_error: `${label} wajib diisi.`, invalid_type_error: `${label} tidak valid.` })
     .trim()

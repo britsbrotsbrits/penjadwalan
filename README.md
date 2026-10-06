@@ -17,6 +17,9 @@ Prinsip: **CODING = ENGINE, DATABASE + CONFIGURATION = RULES.** Dokumen arsitekt
 - Phase 5 (mentor/tutor, kompetensi, availability): `/admin/mentor`, `/admin/kompetensi`, `/admin/availability`,
   dan `/tutor/availability` (mentor mengisi sendiri).
 - Phase 6 (ruangan tetap): setiap rombel boleh punya ruangan tetap (`/admin/rombel`), ringkasan pemakaian di `/admin/ruangan`.
+- Phase 7 (konfigurasi akademik): sesi per hari dan total sesi per minggu dengan hierarki program > tipe kelas > rombel
+  (`/admin/sesi-kurikulum`), distribusi subtes per minggu (`/admin/distribusi`), resolver murni di `src/lib/config`,
+  validasi discrepancy.
 
 ## Setup Supabase (sekali di awal)
 
@@ -80,6 +83,20 @@ Jalankan di **SQL Editor** Supabase: `supabase/migrations/20261007100000_add_rom
 - Kapasitas TIDAK dipaksa database. UI memperingatkan bila kapasitas kurang dari siswa aktif (atau dari ukuran standar tipe kelas bila belum ada siswa, DEC-02). Validator penjadwalan kelak memperlakukannya sebagai hard constraint.
 - Ruangan yang dinonaktifkan tidak diblokir walau dipakai rombel; rombelnya diberi peringatan dan tetap bisa diedit.
 
+## Setup konfigurasi akademik (Phase 7)
+
+Jalankan di **SQL Editor** Supabase, berurutan:
+
+1. `supabase/migrations/20261008100000_create_academic_config.sql` (sekali)
+2. `supabase/seed/003_academic_config.sql` (aman diulang; hanya mengisi tabel yang masih kosong)
+
+- Nilai awal hanya yang tertulis di sumber: sesi per hari per tipe kelas (master prompt bagian 10), total sesi per minggu untuk Kelas 3 SMA General (6), Super Intensif VIP (24), dan Super Camp (36, level program), serta baseline distribusi Gap Year (12 sesi, termasuk item fleksibel KMM/PPU). Semua boleh diubah admin; tidak ada angka ini di kode.
+- Nilai paling spesifik menang: rombel + hari > rombel > tipe kelas > program > global. Kolom kosong = ikut level di atasnya. Bila tidak ada nilai di level mana pun, hasilnya "belum diatur" (tidak ada angka karangan).
+- Distribusi diwariskan sebagai satu kesatuan dari level terdekat yang punya item (rombel > tipe kelas > program).
+- Bila total sesi/minggu berbeda dari total distribusi, halaman menampilkan **error** selisih (TBD-05); sistem tidak menambah atau mengurangi sesi otomatis. Program tanpa distribusi hanya diberi peringatan (TBD-03).
+- Override per hari (`rombel_day`) sudah didukung database dan resolver, tetapi belum punya layar admin. Kolom periode (`period_id`) menunggu tabel periode jadwal.
+- Tabel hanya bisa ditulis lewat fungsi database (`set_scheduling_setting`, `clear_scheduling_setting`, `set_subtest_distribution`, `clear_subtest_distribution`) dan hanya admin yang bisa membaca/menulis.
+
 ## Tes RLS
 
 File di `supabase/tests/`:
@@ -91,6 +108,7 @@ File di `supabase/tests/`:
 | `academic_rls.test.sql` | 17 kelompok kasus Phase 4: akses per peran, tidak ada DELETE, kolom tak bisa diubah, `move_student`, riwayat, kode siswa, constraint, view jumlah siswa |
 | `tutors_rls.test.sql` | 16 kelompok kasus Phase 5: anon, tutor A/B, tutor nonaktif, admin; isolasi rate, eskalasi, fungsi availability/kompetensi/update tutor, constraint, cascade |
 | `fixed_room.test.sql` | 7 kelompok kasus Phase 6: ruangan tetap harus aktif, ganti/kosongkan, berbagi ruangan, kapasitas tidak dipaksa, ruangan dinonaktifkan, tanpa DELETE, tutor/anon |
+| `academic_config.test.sql` | 11 kelompok kasus Phase 7: nilai per level, upsert, validasi nilai/scope/hari, clear, distribusi (item fleksibel, penggantian atomik, input buruk), tanpa tulis langsung, tutor/anon |
 
 Jalankan seluruh isi file di SQL Editor pada project **dev/scratch** atau lewat `psql`. Semua perubahan di-rollback, dan tes tidak bergantung pada isi database (akun dan data yang sudah ada tidak mengganggu). Hasil yang benar: tidak ada error merah. Di `psql` terlihat NOTICE `PASS ...` per kasus dan `SEMUA TES LULUS` di akhir; SQL Editor Supabase mungkin tidak menampilkan NOTICE, jadi ketiadaan error sudah berarti lulus. Jika ada kasus yang gagal, pesan error menyebut kasusnya. Tes ini wajib dijalankan ulang setiap ada perubahan policy atau tabel baru.
 
@@ -121,7 +139,7 @@ Cek deployment: `GET /api/health` mengembalikan `{ "status": "ok", "phase": 6 }`
 src/
   app/            routes (Next.js App Router)
   lib/
-    config/       resolver konfigurasi         [engine murni]
+    config/       resolver konfigurasi, distribusi, validasi discrepancy [engine murni, ber-tes]
     scheduler/    scheduling engine            [engine murni]
     validation/   validation engine            [engine murni]
     simulator/    simulator                    [engine murni]
@@ -139,6 +157,7 @@ src/
     master-data/  queries + server actions subtes, ruangan, slot, hari aktif
     academic/     queries + server actions program, tipe kelas, rombel, siswa
     tutors/       queries + server actions mentor, kompetensi, availability
+    config/       queries + server actions konfigurasi sesi dan distribusi subtes
 supabase/
   migrations/     migrasi SQL berurutan
   seed/           seed data awal

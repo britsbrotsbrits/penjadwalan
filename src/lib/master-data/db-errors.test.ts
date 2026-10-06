@@ -99,6 +99,22 @@ describe("mapDbError", () => {
     ).toBe("Ruangan tetap tidak ditemukan.");
   });
 
+  it("mengenali constraint konfigurasi akademik", () => {
+    const cases: Array<[string, string, "konfigurasi" | "distribusi", string]> = [
+      ["23514", "scheduling_settings_value_range", "konfigurasi", "Nilai di luar rentang yang diizinkan (sesi per hari 1-99, total sesi per minggu 1-999)."],
+      ["23514", "scheduling_settings_value_integer", "konfigurasi", "Nilai harus berupa bilangan bulat."],
+      ["23505", "subtest_distribution_unique_subtest", "distribusi", "Subtes yang sama muncul lebih dari sekali dalam distribusi."],
+      ["23505", "subtest_distribution_unique_label", "distribusi", "Nama item fleksibel sudah dipakai dalam distribusi ini."],
+      ["23514", "subtest_distribution_shape", "distribusi", "Item fleksibel butuh nama dan minimal 2 subtes; item biasa butuh satu subtes."],
+    ];
+    for (const [code, constraint, entity, expected] of cases) {
+      expect(mapDbError({ code, message: `violates constraint "${constraint}"` }, entity)).toBe(expected);
+    }
+    expect(mapDbError({ code: "P0002", message: "scope konfigurasi tidak ditemukan" }, "konfigurasi")).toBe(
+      "Data konfigurasi tidak ditemukan.",
+    );
+  });
+
   it("mengenali constraint tutor", () => {
     expect(
       mapDbError({ code: "23514", message: 'violates check constraint "tutor_profiles_level_range"' }, "tutor"),

@@ -20,7 +20,9 @@ export type MasterEntity =
   | "siswa"
   | "tutor"
   | "kompetensi"
-  | "availability";
+  | "availability"
+  | "konfigurasi"
+  | "distribusi";
 
 const GENERIC = "Terjadi kesalahan saat menyimpan data. Coba lagi.";
 
@@ -118,6 +120,29 @@ const BY_CONSTRAINT: ReadonlyArray<{ constraint: string; message: string }> = [
   {
     constraint: "tutor_availability_slot_range",
     message: "Nomor sesi availability harus antara 1 dan 99.",
+  },
+
+  // Konfigurasi akademik (Phase 7)
+  {
+    constraint: "scheduling_settings_value_range",
+    message: "Nilai di luar rentang yang diizinkan (sesi per hari 1-99, total sesi per minggu 1-999).",
+  },
+  { constraint: "scheduling_settings_value_integer", message: "Nilai harus berupa bilangan bulat." },
+  {
+    constraint: "subtest_distribution_unique_subtest",
+    message: "Subtes yang sama muncul lebih dari sekali dalam distribusi.",
+  },
+  {
+    constraint: "subtest_distribution_unique_label",
+    message: "Nama item fleksibel sudah dipakai dalam distribusi ini.",
+  },
+  {
+    constraint: "subtest_distribution_shape",
+    message: "Item fleksibel butuh nama dan minimal 2 subtes; item biasa butuh satu subtes.",
+  },
+  {
+    constraint: "subtest_distribution_sessions_range",
+    message: "Sesi per minggu harus antara 1 dan 99.",
   },
 ];
 

@@ -8,7 +8,14 @@ type NavItem = { href: string; label: string; exact?: boolean };
 // Mengikuti struktur sidebar di master prompt. Menu lain ditambahkan saat fiturnya dibangun.
 const GROUPS: ReadonlyArray<{ title: string; items: readonly NavItem[] }> = [
   { title: "Dashboard", items: [{ href: "/admin", label: "Dashboard", exact: true }] },
-  { title: "Akademik", items: [{ href: "/admin/subtes", label: "Subtes" }] },
+  {
+    title: "Akademik",
+    items: [
+      { href: "/admin/subtes", label: "Subtes" },
+      { href: "/admin/sesi-kurikulum", label: "Sesi & Kurikulum" },
+      { href: "/admin/distribusi", label: "Distribusi Subtes" },
+    ],
+  },
   {
     title: "Program & Kelas",
     items: [

@@ -33,6 +33,7 @@ const GROUPS: ReadonlyArray<{ title: string; items: readonly NavItem[] }> = [
       { href: "/admin/availability", label: "Availability" },
     ],
   },
+  { title: "Penjadwalan", items: [{ href: "/admin/simulator", label: "Simulator" }] },
   {
     title: "Operasional",
     items: [

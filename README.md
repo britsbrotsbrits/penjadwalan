@@ -20,6 +20,8 @@ Prinsip: **CODING = ENGINE, DATABASE + CONFIGURATION = RULES.** Dokumen arsitekt
 - Phase 7 (konfigurasi akademik): sesi per hari dan total sesi per minggu dengan hierarki program > tipe kelas > rombel
   (`/admin/sesi-kurikulum`), distribusi subtes per minggu (`/admin/distribusi`), resolver murni di `src/lib/config`,
   validasi discrepancy.
+- Phase 8 (simulator): `/admin/simulator` membuat data sintetis (Small / Realistic / Stress, seed tetap), menghitung
+  kebutuhan sesi, menganalisis kelayakan, dan menyiapkan laporan metrik. Tanpa perubahan database.
 
 ## Setup Supabase (sekali di awal)
 
@@ -97,6 +99,17 @@ Jalankan di **SQL Editor** Supabase, berurutan:
 - Override per hari (`rombel_day`) sudah didukung database dan resolver, tetapi belum punya layar admin. Kolom periode (`period_id`) menunggu tabel periode jadwal.
 - Tabel hanya bisa ditulis lewat fungsi database (`set_scheduling_setting`, `clear_scheduling_setting`, `set_subtest_distribution`, `clear_subtest_distribution`) dan hanya admin yang bisa membaca/menulis.
 
+## Simulator (Phase 8)
+
+Tidak ada SQL yang dijalankan di fase ini. Buka `/admin/simulator`, pilih mode dan seed, klik **Jalankan**.
+
+- Berjalan murni di memori dengan data sintetis; tidak membaca atau menulis database produksi. Seed yang sama = skenario yang sama (URL bisa dibagikan, mis. `?mode=realistic&seed=7`).
+- Model: satu minggu representatif (hari x nomor sesi). Penanggalan per periode (DEC-01) menunggu tabel periode jadwal.
+- Kebutuhan sesi hanya berasal dari distribusi subtes; total yang berbeda dari sesi/minggu dilaporkan sebagai discrepancy, tidak ada sesi karangan.
+- Analisis kelayakan memeriksa syarat perlu (tutor kompeten, kapasitas tutor, kapasitas ruangan menurut ukuran kelas, batas sesi/hari). Lolos tidak menjamin jadwal ada; gagal berarti pasti tidak mungkin, lengkap dengan alasan.
+- Scheduler baru dibangun di Phase 9. Sampai itu, hasil penjadwalan 0% dan tercatat `SCHEDULER_NOT_AVAILABLE`; metrik (bentrok tutor/ruangan/rombel, kapasitas, kompetensi, availability, batas harian, ruangan tetap, pembukuan, beban tutor) sudah diuji dengan scheduler contoh di tes.
+- Permintaan tutor belum dimodelkan (belum ada tabelnya), jadi "unmet requests" ditandai belum dimodelkan.
+
 ## Tes RLS
 
 File di `supabase/tests/`:
@@ -150,6 +163,8 @@ src/
     academic/     skema Zod, label, tanggal, pencarian/paginasi siswa (murni, ber-tes)
     tutors/       skema Zod, grid availability, label tutor (murni, ber-tes)
     rooms/        analisis ruangan tetap vs kapasitas (murni, ber-tes)
+    scheduler/    tipe bersama, kebutuhan sesi, analisis kelayakan (murni, ber-tes; scheduler di Phase 9)
+    simulator/    RNG berseed, generator skenario, metrik, runner (murni, ber-tes)
     sheets/       sinkronisasi DB -> Google Sheets
     env.ts        validasi environment (Zod)
   components/     komponen UI bersama (ActionForm, AdminNav)

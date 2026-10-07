@@ -41,14 +41,21 @@ const naive: SchedulerFn = ({ snapshot, requirements }) => {
 };
 
 describe("runSimulation", () => {
-  it("tanpa scheduler: 0% selesai, semua dicatat SCHEDULER_NOT_AVAILABLE, tanpa pelanggaran", () => {
-    const run = runSimulation({ mode: "small", seed: 1 });
+  it("scheduler kosong: 0% selesai, semua dicatat SCHEDULER_NOT_AVAILABLE, tanpa pelanggaran", () => {
+    const run = runSimulation({ mode: "small", seed: 1, scheduler: unavailableScheduler });
     expect(run.schedulerAvailable).toBe(false);
     expect(run.report.scheduled).toBe(0);
     expect(run.report.completionPercent).toBe(0);
     expect(run.report.violations).toEqual([]);
     expect(run.report.unscheduledByReason).toEqual({ SCHEDULER_NOT_AVAILABLE: run.scenario.requiredSessions });
     expect(run.scenario.requiredSessions).toBeGreaterThan(0);
+  });
+
+  it("tanpa argumen scheduler memakai scheduler sungguhan", () => {
+    const run = runSimulation({ mode: "small", seed: 1 });
+    expect(run.schedulerAvailable).toBe(true);
+    expect(run.report.scheduled).toBeGreaterThan(0);
+    expect(run.report.violations).toEqual([]);
   });
 
   it("deterministik: seed sama = hasil sama", () => {
@@ -125,6 +132,6 @@ describe("runSimulation", () => {
 
   it("unavailableScheduler menyebut alasannya", () => {
     const r = unavailableScheduler({ snapshot: runSimulation({ mode: "small", seed: 1 }).snapshot, requirements: [{ id: "a", rombelId: "r", allowedSubtestIds: ["x"], label: "L", sessions: 2 }], seed: 1 });
-    expect(r.unscheduled).toEqual([{ requirementId: "a", missing: 2, reason: "SCHEDULER_NOT_AVAILABLE", detail: "Scheduler belum dibangun (Phase 9)." }]);
+    expect(r.unscheduled).toEqual([{ requirementId: "a", missing: 2, reason: "SCHEDULER_NOT_AVAILABLE", detail: "Scheduler tidak dijalankan." }]);
   });
 });

@@ -1,6 +1,7 @@
 import { analyzeFeasibility, type FeasibilityReport } from "../scheduler/feasibility";
 import { expandRequirements, totalRequiredSessions, type RequirementIssue } from "../scheduler/requirements";
 import type { Requirement, SchedulerFn, SchedulerResult, SchedulingSnapshot } from "../scheduler/types";
+import { scheduler as defaultScheduler } from "../scheduler/solve";
 import { generateScenario, type SimulationMode } from "./generator";
 import { evaluateSchedule, type ScheduleReport } from "./metrics";
 
@@ -10,14 +11,14 @@ import { evaluateSchedule, type ScheduleReport } from "./metrics";
  * simulator, tes, dan produksi memakai scheduler yang sama (Phase 9).
  */
 
-/** Scheduler pengganti sampai Phase 9: tidak menjadwalkan apa pun dan mengatakannya terang-terangan. */
+/** Scheduler kosong (untuk uji): tidak menjadwalkan apa pun dan mengatakannya terang-terangan. */
 export const unavailableScheduler: SchedulerFn = ({ requirements }) => ({
   scheduled: [],
   unscheduled: requirements.map((r) => ({
     requirementId: r.id,
     missing: r.sessions,
     reason: "SCHEDULER_NOT_AVAILABLE" as const,
-    detail: "Scheduler belum dibangun (Phase 9).",
+    detail: "Scheduler tidak dijalankan.",
   })),
 });
 
@@ -45,7 +46,7 @@ export type SimulationRun = {
   feasibility: FeasibilityReport;
   schedulerResult: SchedulerResult;
   report: ScheduleReport;
-  /** true bila scheduler yang dipakai adalah penggantinya (belum ada scheduler sungguhan). */
+  /** false bila yang dipakai scheduler kosong (unavailableScheduler). */
   schedulerAvailable: boolean;
 };
 
@@ -66,7 +67,7 @@ export function summarizeScenario(snapshot: SchedulingSnapshot, requirements: re
 
 export function runSimulation(options: { mode: SimulationMode; seed: number; scheduler?: SchedulerFn }): SimulationRun {
   const { mode, seed } = options;
-  const scheduler = options.scheduler ?? unavailableScheduler;
+  const scheduler = options.scheduler ?? defaultScheduler;
   const { snapshot, notes } = generateScenario(mode, seed);
   const { requirements, issues } = expandRequirements(snapshot.rombels);
   const feasibility = analyzeFeasibility(snapshot, requirements);
@@ -83,6 +84,6 @@ export function runSimulation(options: { mode: SimulationMode; seed: number; sch
     feasibility,
     schedulerResult,
     report,
-    schedulerAvailable: options.scheduler !== undefined,
+    schedulerAvailable: scheduler !== unavailableScheduler,
   };
 }

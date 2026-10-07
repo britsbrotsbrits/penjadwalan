@@ -75,6 +75,7 @@ export type ScheduledSession = {
 export type UnscheduledReason =
   | "NO_COMPETENT_TUTOR"
   | "NO_AVAILABLE_TUTOR_SLOT"
+  | "NO_ROMBEL_SLOT"
   | "NO_ROOM_CAPACITY"
   | "NO_FREE_ROOM"
   | "FIXED_ROOM_BUSY"

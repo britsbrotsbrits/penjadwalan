@@ -37,7 +37,14 @@ const GROUPS: ReadonlyArray<{ title: string; icon: IconName; items: readonly Nav
       { href: "/admin/availability", label: "Availability" },
     ],
   },
-  { title: "Penjadwalan", icon: "play", items: [{ href: "/admin/simulator", label: "Simulator" }] },
+  {
+    title: "Penjadwalan",
+    icon: "play",
+    items: [
+      { href: "/admin/jadwal", label: "Jadwal" },
+      { href: "/admin/simulator", label: "Simulator" },
+    ],
+  },
   {
     title: "Operasional",
     icon: "building",

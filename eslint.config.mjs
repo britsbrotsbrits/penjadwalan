@@ -10,6 +10,7 @@ const compat = new FlatCompat({ baseDirectory: __dirname });
 const enginePaths = [
   "src/lib/config/**/*.ts",
   "src/lib/scheduler/**/*.ts",
+  "src/lib/schedule/**/*.ts",
   "src/lib/validation/**/*.ts",
   "src/lib/simulator/**/*.ts",
   "src/lib/payroll/**/*.ts",

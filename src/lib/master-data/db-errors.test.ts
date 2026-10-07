@@ -176,3 +176,46 @@ describe("mapDbError", () => {
     expect(mapDbError({}, "hari")).toBe("Terjadi kesalahan saat menyimpan data. Coba lagi.");
   });
 });
+
+describe("mapDbError: jadwal bertanggal (Phase 10)", () => {
+  it("pelanggaran aturan sesi menyebut alasannya dalam bahasa Indonesia", () => {
+    const msg = mapDbError({ code: "P0001", message: "SCHED_VIOLATION:AVAILABILITY,CAPACITY" }, "jadwal");
+    expect(msg).toBe(
+      "Perubahan ditolak: Mentor tidak tersedia pada hari dan sesi ini; Kapasitas ruangan lebih kecil dari jumlah siswa.",
+    );
+  });
+
+  it("periode terkunci menyebut statusnya", () => {
+    expect(mapDbError({ code: "55000", message: "SCHED_NOT_EDITABLE:APPROVED" }, "jadwal")).toBe(
+      "Jadwal berstatus Approved tidak dapat diubah.",
+    );
+    expect(mapDbError({ code: "55000", message: "SCHED_NOT_EDITABLE:LOCKED" }, "jadwal")).toBe(
+      "Jadwal berstatus Locked tidak dapat diubah.",
+    );
+  });
+
+  it("bentrok mentor/ruangan/rombel dikenali dari nama indeks unik", () => {
+    const dup = (name: string) => ({
+      code: "23505",
+      message: `duplicate key value violates unique constraint "${name}"`,
+    });
+    expect(mapDbError(dup("teaching_sessions_tutor_slot_key"), "jadwal")).toBe("Mentor sudah mengajar pada tanggal dan sesi itu.");
+    expect(mapDbError(dup("teaching_sessions_room_slot_key"), "jadwal")).toBe("Ruangan sudah dipakai pada tanggal dan sesi itu.");
+    expect(mapDbError(dup("teaching_sessions_rombel_slot_key"), "jadwal")).toBe("Rombel sudah punya sesi pada tanggal dan sesi itu.");
+  });
+
+  it("aturan periode: nama unik, tumpang tindih, panjang, sesi di luar rentang", () => {
+    expect(mapDbError({ code: "23505", message: 'duplicate key ... "schedule_periods_name_lower_key"' }, "periode jadwal")).toBe("Nama periode sudah dipakai.");
+    expect(mapDbError({ code: "23P01", message: 'conflicting key value violates exclusion constraint "schedule_periods_no_overlap"' }, "periode jadwal")).toBe(
+      "Rentang tanggal tumpang tindih dengan periode lain yang masih aktif.",
+    );
+    expect(mapDbError({ code: "23514", message: 'violates check constraint "schedule_periods_max_length"' }, "periode jadwal")).toBe("Periode maksimal 92 hari.");
+    expect(mapDbError({ code: "P0001", message: "SCHED_SESSIONS_OUTSIDE_RANGE" }, "periode jadwal")).toContain("di luar rentang");
+  });
+
+  it("kode tak dikenal di token tidak bocor; jatuh ke pesan umum", () => {
+    expect(mapDbError({ code: "P0001", message: "SCHED_VIOLATION:NGAWUR" }, "jadwal")).toBe(
+      "Terjadi kesalahan saat menyimpan data. Coba lagi.",
+    );
+  });
+});

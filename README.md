@@ -118,7 +118,15 @@ Tidak ada SQL di fase ini. Engine murni (tanpa database) di `src/lib/scheduler`,
 - Pipeline: kebutuhan diurutkan paling terbatas lebih dulu, tiap sesi dicari kandidatnya dengan hard constraint sebagai filter (rombel tidak bentrok dan tidak melebihi sesi/hari, ruangan bebas dan muat atau ruangan tetap, tutor kompeten + tersedia + tidak bentrok), lalu soft constraint sebagai skor (pemerataan beban tutor, sebar antar hari, hemat ruangan besar, pakai spesialis dulu, seimbangkan subtes fleksibel). Skor setara dipilih acak dengan seed, jadi hasil bisa diulang.
 - Bila buntu, repair terbatas memindahkan satu sesi penghalang ke sel lain (selalu diperiksa ulang dan dibatalkan bila gagal).
 - Sesi tidak pernah ditempatkan melanggar hard constraint. Yang tidak muat dilaporkan beserta alasan terstruktur: `NO_COMPETENT_TUTOR`, `NO_AVAILABLE_TUTOR_SLOT`, `NO_ROOM_CAPACITY`, `NO_FREE_ROOM`, `FIXED_ROOM_BUSY`, `NO_ROMBEL_SLOT`, dan rincian jumlah sel yang terhalang.
-- Belum ada: jadwal beku untuk Generate Additional (Phase 11), combined session (TBD-01), permintaan tutor, bobot seniority (arti level belum didefinisikan), dan penanggalan per periode (DEC-01).
+- Belum ada: jadwal beku untuk Generate Additional (Phase 11), combined session (TBD-01), permintaan tutor, dan bobot seniority (arti level belum didefinisikan).
+
+## Jadwal bertanggal (Phase 10)
+
+- **Model (DEC-01):** jadwal = pertemuan bertanggal per `schedule_periods` (maks. 92 hari, tidak boleh tumpang tindih). Tabel: `schedule_periods`, `scheduling_runs`, `teaching_sessions` (satu sesi = satu rombel; sesi gabungan menunggu TBD-01), `unscheduled_requirements`. Hanya bisa ditulis lewat RPC (admin dicek di database).
+- **Generate Jadwal (DEC-06, sinkron):** snapshot dari data nyata (`scheduler/snapshot.ts`) -> scheduler membuat pola mingguan -> `schedule/plan.ts` memperluasnya ke tanggal periode (dibatasi tanggal mulai/selesai rombel) -> `save_generated_schedule` menyimpan atomik dan **mengganti semua sesi periode itu**. Libur/tanggal merah belum dimodelkan.
+- **Validasi:** `_schedule_violations()` di database (kapasitas, kompetensi, availability, ruangan tetap, data nonaktif, hari/sesi aktif, di luar periode) dipakai oleh generate, edit manual, dan laporan; `validation/weekly-distribution.ts` memeriksa distribusi subtes per minggu (kekurangan hanya pada minggu penuh). Indeks unik mencegah mentor/ruangan/rombel dobel.
+- **Edit manual:** tambah, ubah (tanggal, sesi, subtes, mentor, ruangan), dan batalkan sesi; pelanggaran ditolak dengan alasan. Belum ada mekanisme override (butuh audit log, Phase 17).
+- **Status:** hanya DRAFT dan GENERATED yang bisa diedit/digenerate ulang; APPROVED/LOCKED/CANCELLED dilindungi. Transisi status lainnya = Phase 11.
 
 ## Tes RLS
 
@@ -132,6 +140,7 @@ File di `supabase/tests/`:
 | `tutors_rls.test.sql` | 16 kelompok kasus Phase 5: anon, tutor A/B, tutor nonaktif, admin; isolasi rate, eskalasi, fungsi availability/kompetensi/update tutor, constraint, cascade |
 | `fixed_room.test.sql` | 7 kelompok kasus Phase 6: ruangan tetap harus aktif, ganti/kosongkan, berbagi ruangan, kapasitas tidak dipaksa, ruangan dinonaktifkan, tanpa DELETE, tutor/anon |
 | `academic_config.test.sql` | 11 kelompok kasus Phase 7: nilai per level, upsert, validasi nilai/scope/hari, clear, distribusi (item fleksibel, penggantian atomik, input buruk), tanpa tulis langsung, tutor/anon |
+| `schedule.test.sql` | 11 kelompok kasus Phase 10: periode (unik, urutan, panjang, tumpang tindih), sesi manual (semua aturan), dobel, ubah/batalkan, proteksi status, generate atomik, laporan validasi, ubah periode, hak akses |
 
 Jalankan seluruh isi file di SQL Editor pada project **dev/scratch** atau lewat `psql`. Semua perubahan di-rollback, dan tes tidak bergantung pada isi database (akun dan data yang sudah ada tidak mengganggu). Hasil yang benar: tidak ada error merah. Di `psql` terlihat NOTICE `PASS ...` per kasus dan `SEMUA TES LULUS` di akhir; SQL Editor Supabase mungkin tidak menampilkan NOTICE, jadi ketiadaan error sudah berarti lulus. Jika ada kasus yang gagal, pesan error menyebut kasusnya. Tes ini wajib dijalankan ulang setiap ada perubahan policy atau tabel baru.
 
@@ -164,7 +173,8 @@ src/
   lib/
     config/       resolver konfigurasi, distribusi, validasi discrepancy [engine murni, ber-tes]
     scheduler/    scheduling engine            [engine murni]
-    validation/   validation engine            [engine murni]
+    validation/   tanggal, ekspansi pola mingguan, pesan pelanggaran, distribusi mingguan [engine murni, ber-tes]
+    schedule/     rencana jadwal per periode, skema form, label [murni, ber-tes]
     simulator/    simulator                    [engine murni]
     payroll/      kalkulasi payroll            [engine murni]
     supabase/     client browser & server
@@ -183,6 +193,7 @@ src/
     academic/     queries + server actions program, tipe kelas, rombel, siswa
     tutors/       queries + server actions mentor, kompetensi, availability
     config/       queries + server actions konfigurasi sesi dan distribusi subtes
+    schedule/     queries + server actions periode, generate, dan edit sesi
 supabase/
   migrations/     migrasi SQL berurutan
   seed/           seed data awal

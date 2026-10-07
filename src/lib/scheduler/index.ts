@@ -3,3 +3,9 @@
 export * from "./types";
 export * from "./requirements";
 export * from "./feasibility";
+export * from "./rng";
+export * from "./candidates";
+export * from "./explain";
+export * from "./solve";
+export { buildContext, ScheduleState } from "./state";
+export * from "./snapshot";

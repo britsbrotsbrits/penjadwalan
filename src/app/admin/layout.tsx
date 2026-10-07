@@ -8,7 +8,7 @@ export default async function AdminLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const session = await requireRole(["admin"]);
-  const name = session.profile.fullName || session.user.email;
+  const name = session.profile.fullName || session.user.email || "Pengguna";
 
   return (
     <div className="min-h-screen md:flex">

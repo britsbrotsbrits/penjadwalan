@@ -7,7 +7,7 @@ export default async function TutorLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const session = await requireRole(["tutor"]);
-  const name = session.profile.fullName || session.user.email;
+  const name = session.profile.fullName || session.user.email || "Pengguna";
 
   return (
     <div className="min-h-screen pb-16 md:pb-0">

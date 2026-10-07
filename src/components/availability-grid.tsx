@@ -22,11 +22,11 @@ export function AvailabilityGrid({ days, slots, values }: Props) {
         <caption className="sr-only">Availability per hari dan sesi</caption>
         <thead>
           <tr>
-            <th scope="col" className="p-2 text-left text-xs font-medium uppercase tracking-wide opacity-60">
+            <th scope="col" className="p-2 text-left text-xs font-medium uppercase tracking-wide text-muted">
               Sesi
             </th>
             {days.map((day) => (
-              <th key={day} scope="col" className="p-2 text-center text-xs font-medium uppercase tracking-wide opacity-60">
+              <th key={day} scope="col" className="p-2 text-center text-xs font-medium uppercase tracking-wide text-muted">
                 {dayName(day)}
               </th>
             ))}
@@ -34,10 +34,10 @@ export function AvailabilityGrid({ days, slots, values }: Props) {
         </thead>
         <tbody>
           {slots.map((slot) => (
-            <tr key={slot.slotNo} className="border-t border-current/10">
+            <tr key={slot.slotNo} className="border-t border-line">
               <th scope="row" className="p-2 text-left font-normal">
                 <span className="font-medium">Sesi {slot.slotNo}</span>
-                <span className="block text-xs opacity-60">
+                <span className="block text-xs text-muted">
                   {slot.startTime}-{slot.endTime}
                 </span>
               </th>
@@ -47,14 +47,15 @@ export function AvailabilityGrid({ days, slots, values }: Props) {
                 return (
                   <td key={key} className="p-1 text-center">
                     <label
-                      className={`flex h-9 w-full cursor-pointer items-center justify-center rounded border ${
-                        saved === undefined ? "border-dashed border-current/40" : "border-current/20"
+                      className={`flex h-9 w-full cursor-pointer items-center justify-center rounded-lg border bg-surface hover:bg-primary-soft ${
+                        saved === undefined ? "border-dashed border-disabled" : "border-line"
                       }`}
                       title={saved === undefined ? "Belum pernah diisi" : undefined}
                     >
                       <input
                         type="checkbox"
                         name="cell"
+                        className="h-4 w-4 accent-primary"
                         value={key}
                         defaultChecked={saved === true}
                         aria-label={`${dayName(day)} sesi ${slot.slotNo} (${slot.startTime}-${slot.endTime}) tersedia`}

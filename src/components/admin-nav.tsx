@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Icon, type IconName } from "./icons";
 
 type NavItem = { href: string; label: string; exact?: boolean };
 
 // Mengikuti struktur sidebar di master prompt. Menu lain ditambahkan saat fiturnya dibangun.
-const GROUPS: ReadonlyArray<{ title: string; items: readonly NavItem[] }> = [
-  { title: "Dashboard", items: [{ href: "/admin", label: "Dashboard", exact: true }] },
+const GROUPS: ReadonlyArray<{ title: string; icon: IconName; items: readonly NavItem[] }> = [
+  { title: "Dashboard", icon: "dashboard", items: [{ href: "/admin", label: "Dashboard", exact: true }] },
   {
     title: "Akademik",
     items: [
@@ -33,7 +34,7 @@ const GROUPS: ReadonlyArray<{ title: string; items: readonly NavItem[] }> = [
       { href: "/admin/availability", label: "Availability" },
     ],
   },
-  { title: "Penjadwalan", items: [{ href: "/admin/simulator", label: "Simulator" }] },
+  { title: "Penjadwalan", icon: "play", items: [{ href: "/admin/simulator", label: "Simulator" }] },
   {
     title: "Operasional",
     items: [
@@ -47,10 +48,11 @@ export function AdminNav() {
   const pathname = usePathname();
 
   return (
-    <nav aria-label="Menu admin" className="flex flex-col gap-5 text-sm">
+    <nav aria-label="Menu admin" className="flex flex-col gap-4 text-sm">
       {GROUPS.map((group) => (
         <div key={group.title} className="flex flex-col gap-1">
-          <span className="text-xs font-medium uppercase tracking-wide opacity-50">
+          <span className="flex items-center gap-2 px-2 text-[11px] font-semibold uppercase tracking-wider text-white/50">
+            <Icon name={group.icon} className="h-4 w-4" />
             {group.title}
           </span>
           {group.items.map((item) => {
@@ -62,7 +64,11 @@ export function AdminNav() {
                 key={item.href}
                 href={item.href}
                 aria-current={active ? "page" : undefined}
-                className={active ? "font-semibold underline" : "opacity-80 hover:underline"}
+                className={`rounded-lg px-2 py-1.5 pl-8 ${
+                  active
+                    ? "bg-primary font-medium text-white"
+                    : "text-white/80 hover:bg-white/10 hover:text-white"
+                }`}
               >
                 {item.label}
               </Link>

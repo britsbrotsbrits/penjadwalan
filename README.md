@@ -20,6 +20,7 @@ Prinsip: **CODING = ENGINE, DATABASE + CONFIGURATION = RULES.** Dokumen arsitekt
 - Phase 7 (konfigurasi akademik): sesi per hari dan total sesi per minggu dengan hierarki program > tipe kelas > rombel
   (`/admin/sesi-kurikulum`), distribusi subtes per minggu (`/admin/distribusi`), resolver murni di `src/lib/config`,
   validasi discrepancy.
+- Phase 9 (scheduling engine): scheduler constraint-based murni di `src/lib/scheduler` (hard constraint, scoring, repair, penjelasan alasan unscheduled), dijalankan lewat simulator.
 - Phase 8 (simulator): `/admin/simulator` membuat data sintetis (Small / Realistic / Stress, seed tetap), menghitung
   kebutuhan sesi, menganalisis kelayakan, dan menyiapkan laporan metrik. Tanpa perubahan database.
 
@@ -107,8 +108,17 @@ Tidak ada SQL yang dijalankan di fase ini. Buka `/admin/simulator`, pilih mode d
 - Model: satu minggu representatif (hari x nomor sesi). Penanggalan per periode (DEC-01) menunggu tabel periode jadwal.
 - Kebutuhan sesi hanya berasal dari distribusi subtes; total yang berbeda dari sesi/minggu dilaporkan sebagai discrepancy, tidak ada sesi karangan.
 - Analisis kelayakan memeriksa syarat perlu (tutor kompeten, kapasitas tutor, kapasitas ruangan menurut ukuran kelas, batas sesi/hari). Lolos tidak menjamin jadwal ada; gagal berarti pasti tidak mungkin, lengkap dengan alasan.
-- Scheduler baru dibangun di Phase 9. Sampai itu, hasil penjadwalan 0% dan tercatat `SCHEDULER_NOT_AVAILABLE`; metrik (bentrok tutor/ruangan/rombel, kapasitas, kompetensi, availability, batas harian, ruangan tetap, pembukuan, beban tutor) sudah diuji dengan scheduler contoh di tes.
+- Scheduler (Phase 9) dijalankan pada skenario; metrik (bentrok tutor/ruangan/rombel, kapasitas, kompetensi, availability, batas harian, ruangan tetap, pembukuan, beban tutor) dihitung ulang dari hasil, bukan dari klaim scheduler.
 - Permintaan tutor belum dimodelkan (belum ada tabelnya), jadi "unmet requests" ditandai belum dimodelkan.
+
+## Scheduling engine (Phase 9)
+
+Tidak ada SQL di fase ini. Engine murni (tanpa database) di `src/lib/scheduler`, dijalankan dari `/admin/simulator`; belum ada tombol "Generate" untuk data asli (itu Phase 10).
+
+- Pipeline: kebutuhan diurutkan paling terbatas lebih dulu, tiap sesi dicari kandidatnya dengan hard constraint sebagai filter (rombel tidak bentrok dan tidak melebihi sesi/hari, ruangan bebas dan muat atau ruangan tetap, tutor kompeten + tersedia + tidak bentrok), lalu soft constraint sebagai skor (pemerataan beban tutor, sebar antar hari, hemat ruangan besar, pakai spesialis dulu, seimbangkan subtes fleksibel). Skor setara dipilih acak dengan seed, jadi hasil bisa diulang.
+- Bila buntu, repair terbatas memindahkan satu sesi penghalang ke sel lain (selalu diperiksa ulang dan dibatalkan bila gagal).
+- Sesi tidak pernah ditempatkan melanggar hard constraint. Yang tidak muat dilaporkan beserta alasan terstruktur: `NO_COMPETENT_TUTOR`, `NO_AVAILABLE_TUTOR_SLOT`, `NO_ROOM_CAPACITY`, `NO_FREE_ROOM`, `FIXED_ROOM_BUSY`, `NO_ROMBEL_SLOT`, dan rincian jumlah sel yang terhalang.
+- Belum ada: jadwal beku untuk Generate Additional (Phase 11), combined session (TBD-01), permintaan tutor, bobot seniority (arti level belum didefinisikan), dan penanggalan per periode (DEC-01).
 
 ## Tes RLS
 
@@ -163,7 +173,7 @@ src/
     academic/     skema Zod, label, tanggal, pencarian/paginasi siswa (murni, ber-tes)
     tutors/       skema Zod, grid availability, label tutor (murni, ber-tes)
     rooms/        analisis ruangan tetap vs kapasitas (murni, ber-tes)
-    scheduler/    tipe bersama, kebutuhan sesi, analisis kelayakan (murni, ber-tes; scheduler di Phase 9)
+    scheduler/    tipe bersama, kebutuhan sesi, kelayakan, scheduler constraint-based, penjelasan (murni, ber-tes)
     simulator/    RNG berseed, generator skenario, metrik, runner (murni, ber-tes)
     sheets/       sinkronisasi DB -> Google Sheets
     env.ts        validasi environment (Zod)
@@ -188,3 +198,9 @@ Modul bertanda **engine murni** dilarang mengimpor Supabase, React, atau Next. A
 2. Di **Settings > Environment Variables**, isi `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, dan `SUPABASE_SERVICE_ROLE_KEY` (nilai dari Supabase > Project Settings > API).
 3. `SUPABASE_SERVICE_ROLE_KEY` adalah secret server. Jangan beri prefix `NEXT_PUBLIC_`.
 4. Setelah `npm install` pertama, commit `package-lock.json` (lalu ganti `npm install` di `.github/workflows/ci.yml` menjadi `npm ci`).
+
+## Fondasi tampilan (UI foundation)
+
+Token desain (warna, font Inter, ukuran heading) ada di `src/app/globals.css`. Komponen bersama:
+`components/{icons,brand,ui}.tsx` (Icon, Brand, PageHeader, Card, Badge, StatCard), `form-styles.ts`,
+`admin-nav.tsx` (sidebar navy), `tutor-bottom-nav.tsx`. Logo resmi: letakkan di `public/` lalu ubah `components/brand.tsx`.

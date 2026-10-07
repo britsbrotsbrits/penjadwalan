@@ -1,24 +1,53 @@
 @import "tailwindcss";
 
+/* Token desain Edu Ops (mengikuti panduan desain BRITS edu center). Hanya tema terang. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #f8fafc;
+  --foreground: #0f172a;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  --color-primary: #0ea5e9;
+  --color-primary-hover: #0284c7;
+  --color-primary-soft: #e0f2fe;
+  --color-secondary: #ef4444;
+  --color-success: #10b981;
+  --color-success-soft: #d1fae5;
+  --color-warning: #f59e0b;
+  --color-warning-soft: #fef3c7;
+  --color-danger: #ef4444;
+  --color-danger-soft: #fee2e2;
+  --color-locked: #8b5cf6;
+  --color-locked-soft: #ede9fe;
+  --color-neutral: #64748b;
+  --color-neutral-soft: #f1f5f9;
+  --color-surface: #ffffff;
+  --color-line: #e5e7eb;
+  --color-muted: #64748b;
+  --color-disabled: #cbd5e1;
+  --color-navy: #052755;
+  --color-navy-hover: #0a3a7a;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans);
+  font-size: 14px;
+}
+
+@layer base {
+  h1 { font-size: 32px; font-weight: 700; line-height: 1.2; }
+  h2 { font-size: 24px; font-weight: 600; line-height: 1.25; }
+  h3 { font-size: 20px; font-weight: 600; line-height: 1.3; }
+  h4 { font-size: 16px; font-weight: 600; line-height: 1.4; }
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }

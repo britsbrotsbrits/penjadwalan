@@ -7,8 +7,8 @@ type Props = {
   hrefFor: (page: number) => string;
 };
 
-const linkClass = "rounded border border-current/30 px-3 py-1 text-sm hover:border-current/60";
-const disabledClass = "rounded border border-current/10 px-3 py-1 text-sm opacity-40";
+const linkClass = "rounded-lg border border-line bg-surface px-3 py-1 text-sm font-medium hover:bg-neutral-soft";
+const disabledClass = "rounded-lg border border-line bg-neutral-soft px-3 py-1 text-sm text-disabled";
 
 export function Pagination({ page, totalPages, hrefFor }: Props) {
   if (totalPages <= 1) return null;
@@ -21,7 +21,7 @@ export function Pagination({ page, totalPages, hrefFor }: Props) {
       ) : (
         <span className={disabledClass}>Sebelumnya</span>
       )}
-      <span className="text-sm">
+      <span className="text-sm text-muted">
         Halaman {page} dari {totalPages}
       </span>
       {page < totalPages ? (

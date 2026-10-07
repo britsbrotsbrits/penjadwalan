@@ -55,12 +55,12 @@ export function ActionForm({
           {pending ? "Menyimpan..." : submitLabel}
         </button>
         {state.status === "success" ? (
-          <span role="status" className="text-sm text-green-600">
+          <span role="status" className="text-sm font-medium text-emerald-600">
             {state.message}
           </span>
         ) : null}
         {state.status === "error" ? (
-          <span role="alert" className="text-sm text-red-600">
+          <span role="alert" className="text-sm font-medium text-red-600">
             {state.message}
           </span>
         ) : null}

@@ -11,6 +11,7 @@ const GROUPS: ReadonlyArray<{ title: string; icon: IconName; items: readonly Nav
   { title: "Dashboard", icon: "dashboard", items: [{ href: "/admin", label: "Dashboard", exact: true }] },
   {
     title: "Akademik",
+    icon: "book",
     items: [
       { href: "/admin/subtes", label: "Subtes" },
       { href: "/admin/sesi-kurikulum", label: "Sesi & Kurikulum" },
@@ -19,6 +20,7 @@ const GROUPS: ReadonlyArray<{ title: string; icon: IconName; items: readonly Nav
   },
   {
     title: "Program & Kelas",
+    icon: "layers",
     items: [
       { href: "/admin/program", label: "Program" },
       { href: "/admin/tipe-kelas", label: "Tipe Kelas" },
@@ -28,6 +30,7 @@ const GROUPS: ReadonlyArray<{ title: string; icon: IconName; items: readonly Nav
   },
   {
     title: "Mentor",
+    icon: "users",
     items: [
       { href: "/admin/mentor", label: "Daftar Mentor" },
       { href: "/admin/kompetensi", label: "Kompetensi" },
@@ -37,6 +40,7 @@ const GROUPS: ReadonlyArray<{ title: string; icon: IconName; items: readonly Nav
   { title: "Penjadwalan", icon: "play", items: [{ href: "/admin/simulator", label: "Simulator" }] },
   {
     title: "Operasional",
+    icon: "building",
     items: [
       { href: "/admin/ruangan", label: "Ruangan" },
       { href: "/admin/kalender", label: "Kalender" },

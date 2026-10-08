@@ -42,6 +42,7 @@ const GROUPS: ReadonlyArray<{ title: string; icon: IconName; items: readonly Nav
     icon: "play",
     items: [
       { href: "/admin/jadwal", label: "Jadwal" },
+      { href: "/admin/absensi", label: "Presensi" },
       { href: "/admin/simulator", label: "Simulator" },
     ],
   },

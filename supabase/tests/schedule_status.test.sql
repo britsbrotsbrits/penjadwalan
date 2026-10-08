@@ -132,14 +132,14 @@ declare
   n integer := 0;
 begin
   perform public._t_admin();
-  p := (select public.create_schedule_period('Uji Transisi', date '2026-11-02', date '2026-11-15'));
+  p := (select public.create_schedule_period('Uji Transisi', date '2054-11-02', date '2054-11-15'));
   foreach f in array statuses loop
     foreach t in array statuses loop
       reset role;
       update public.teaching_sessions set status = 'CANCELLED' where period_id = p;
       delete from public.teaching_sessions where period_id = p;
       insert into public.teaching_sessions (period_id, session_date, slot_no, rombel_id, subtest_id, tutor_id, room_id, source)
-        values (p, date '2026-11-02', 1, public._t_id('rombel', 'ST 1'), public._t_id('subtest', 'UJ_T1'),
+        values (p, date '2054-11-02', 1, public._t_id('rombel', 'ST 1'), public._t_id('subtest', 'UJ_T1'),
                 public._t_id('tutor', '00000000-0000-0000-0000-0000000000f2'), public._t_id('room', 'Uji Status A'), 'MANUAL');
       update public.schedule_periods set status = f where id = p;
       set local role authenticated;
@@ -189,7 +189,7 @@ declare
 begin
   perform public._t_admin();
   set local role authenticated;
-  p := public.create_schedule_period('Uji Approve', date '2027-02-01', date '2027-02-14');
+  p := public.create_schedule_period('Uji Approve', date '2055-02-01', date '2055-02-14');
   reset role;
   update public.schedule_periods set status = 'GENERATED' where id = p;
   set local role authenticated;
@@ -198,7 +198,7 @@ begin
   perform public._t_expect_msg(format($q$select public.set_period_status(%L, 'APPROVED')$q$, p), 'P0001', 'SCHED_APPROVE_EMPTY');
   assert (select status from public.schedule_periods where id = p) = 'GENERATED', 'status tidak berubah bila ditolak';
 
-  sid := public.create_teaching_session(p, date '2027-02-01', 1::smallint, r1, s1, t1, ra);
+  sid := public.create_teaching_session(p, date '2055-02-01', 1::smallint, r1, s1, t1, ra);
 
   -- Kebutuhan belum terjadwal TIDAK menghalangi approve.
   reset role;
@@ -233,13 +233,13 @@ begin
   select id into sid from public.teaching_sessions where period_id = p and status = 'SCHEDULED' limit 1;
   perform public._t_admin();
   set local role authenticated;
-  perform public._t_expect_msg(format($q$select public.create_teaching_session(%L, date '2027-02-02', 1::smallint, %L, %L, %L, %L)$q$, p, r2, s1, t1, ra), '55000', 'SCHED_NOT_EDITABLE:APPROVED');
+  perform public._t_expect_msg(format($q$select public.create_teaching_session(%L, date '2055-02-02', 1::smallint, %L, %L, %L, %L)$q$, p, r2, s1, t1, ra), '55000', 'SCHED_NOT_EDITABLE:APPROVED');
   perform public._t_expect_error(format($q$select public.cancel_teaching_session(%L)$q$, sid), '55000');
   perform public._t_expect_error(format($q$select public.save_generated_schedule(%L, 1, '{}'::jsonb, '[]'::jsonb, '[]'::jsonb)$q$, p), '55000');
 
   -- Tarik persetujuan: bisa diedit lagi.
   perform public.set_period_status(p, 'GENERATED');
-  perform public.cancel_teaching_session(public.create_teaching_session(p, date '2027-02-02', 1::smallint, r2, s1, t1, ra));
+  perform public.cancel_teaching_session(public.create_teaching_session(p, date '2055-02-02', 1::smallint, r2, s1, t1, ra));
   perform public.set_period_status(p, 'APPROVED');
   perform public.set_period_status(p, 'LOCKED');
   assert (select status from public.schedule_periods where id = p) = 'LOCKED', 'LOCKED tercapai';
@@ -247,7 +247,7 @@ begin
   perform public._t_expect_error(format($q$select public.set_period_status(%L, 'APPROVED')$q$, p), '55000');
   perform public._t_expect_error(format($q$select public.set_period_status(%L, 'CANCELLED')$q$, p), '55000');
   perform public._t_expect_error(format($q$select public.cancel_teaching_session(%L)$q$, sid), '55000');
-  perform public._t_expect_error(format($q$select public.update_schedule_period(%L, 'Baru', date '2027-02-01', date '2027-02-14')$q$, p), '55000');
+  perform public._t_expect_error(format($q$select public.update_schedule_period(%L, 'Baru', date '2055-02-01', date '2055-02-14')$q$, p), '55000');
   reset role;
   assert (select status from public.teaching_sessions where id = sid) = 'SCHEDULED', 'sesi di periode LOCKED tidak berubah';
   raise notice 'PASS 03 APPROVED melindungi sesi; tarik persetujuan membuka edit; LOCKED final dan melindungi semuanya';
@@ -264,17 +264,17 @@ declare
 begin
   perform public._t_admin();
   set local role authenticated;
-  p := public.create_schedule_period('Uji Cancel', date '2027-03-01', date '2027-03-14');
-  perform public.create_teaching_session(p, date '2027-03-01', 1::smallint, r1, s1, t1, ra);
-  perform public.create_teaching_session(p, date '2027-03-08', 1::smallint, r1, s1, t1, ra);
+  p := public.create_schedule_period('Uji Cancel', date '2055-03-01', date '2055-03-14');
+  perform public.create_teaching_session(p, date '2055-03-01', 1::smallint, r1, s1, t1, ra);
+  perform public.create_teaching_session(p, date '2055-03-08', 1::smallint, r1, s1, t1, ra);
   -- Tanggal yang sama masih bentrok selama periode aktif.
-  perform public._t_expect_error($q$select public.create_schedule_period('Uji Tabrakan', date '2027-03-05', date '2027-03-20')$q$, '23P01');
+  perform public._t_expect_error($q$select public.create_schedule_period('Uji Tabrakan', date '2055-03-05', date '2055-03-20')$q$, '23P01');
   perform public.set_period_status(p, 'CANCELLED');
   assert (select count(*) from public.teaching_sessions where period_id = p and status = 'SCHEDULED') = 0, 'semua sesi dibatalkan';
   assert (select count(*) from public.teaching_sessions where period_id = p and status = 'CANCELLED') = 2, 'sesi tetap tercatat sebagai CANCELLED';
   -- Periode dibatalkan membebaskan tanggal dan slot untuk periode baru.
-  p2 := public.create_schedule_period('Uji Pengganti', date '2027-03-01', date '2027-03-14');
-  perform public.create_teaching_session(p2, date '2027-03-01', 1::smallint, r1, s1, t1, ra);
+  p2 := public.create_schedule_period('Uji Pengganti', date '2055-03-01', date '2055-03-14');
+  perform public.create_teaching_session(p2, date '2055-03-01', 1::smallint, r1, s1, t1, ra);
   perform public._t_expect_error(format($q$select public.save_generated_schedule(%L, 1, '{}'::jsonb, '[]'::jsonb, '[]'::jsonb)$q$, p), '55000');
   reset role;
   raise notice 'PASS 04 CANCELLED membatalkan sesi, membebaskan tanggal dan slot, dan final';
@@ -298,21 +298,21 @@ declare
 begin
   perform public._t_admin();
   set local role authenticated;
-  p := public.create_schedule_period('Uji Additional', date '2027-04-05', date '2027-04-18');
+  p := public.create_schedule_period('Uji Additional', date '2055-04-05', date '2055-04-18');
 
   -- DRAFT ditolak.
   perform public._t_expect_msg(format($q$select public.save_additional_schedule(%L, 1, '{}'::jsonb, '[]'::jsonb, '[]'::jsonb)$q$, p), '55000', 'SCHED_ADDITIONAL_NOT_ALLOWED:DRAFT');
 
   -- Jadwal awal lewat Generate Jadwal (1 sesi), lalu Additional pada GENERATED dan APPROVED.
   perform public.save_generated_schedule(p, 1, '{}'::jsonb, jsonb_build_array(
-    jsonb_build_object('session_date', '2027-04-05', 'slot_no', 1, 'rombel_id', r1, 'subtest_id', s1, 'tutor_id', t1, 'room_id', ra)),
+    jsonb_build_object('session_date', '2055-04-05', 'slot_no', 1, 'rombel_id', r1, 'subtest_id', s1, 'tutor_id', t1, 'room_id', ra)),
     '[]'::jsonb);
   before := public._t_rows(p);
   assert jsonb_array_length(before) = 1, 'jadwal awal 1 sesi';
 
   extra := jsonb_build_array(
-    jsonb_build_object('session_date', '2027-04-05', 'slot_no', 2, 'rombel_id', r1, 'subtest_id', s1, 'tutor_id', t1, 'room_id', ra),
-    jsonb_build_object('session_date', '2027-04-12', 'slot_no', 2, 'rombel_id', r1, 'subtest_id', s1, 'tutor_id', t1, 'room_id', ra));
+    jsonb_build_object('session_date', '2055-04-05', 'slot_no', 2, 'rombel_id', r1, 'subtest_id', s1, 'tutor_id', t1, 'room_id', ra),
+    jsonb_build_object('session_date', '2055-04-12', 'slot_no', 2, 'rombel_id', r1, 'subtest_id', s1, 'tutor_id', t1, 'room_id', ra));
   run := public.save_additional_schedule(p, 9, '{"x":1}'::jsonb, extra,
     jsonb_build_array(jsonb_build_object('rombel_id', r2, 'label', 'Subtes Status 2', 'subtest_ids', jsonb_build_array(s2),
       'missing_per_week', 1, 'reason_code', 'NO_COMPETENT_TUTOR', 'detail', 'uji')));
@@ -330,7 +330,7 @@ begin
   perform public.set_period_status(p, 'APPROVED');
   before := public._t_rows(p);
   perform public.save_additional_schedule(p, 10, '{}'::jsonb, jsonb_build_array(
-    jsonb_build_object('session_date', '2027-04-06', 'slot_no', 1, 'rombel_id', r2, 'subtest_id', s1, 'tutor_id', t1, 'room_id', ra)), '[]'::jsonb);
+    jsonb_build_object('session_date', '2055-04-06', 'slot_no', 1, 'rombel_id', r2, 'subtest_id', s1, 'tutor_id', t1, 'room_id', ra)), '[]'::jsonb);
   assert (select count(*) from public.teaching_sessions where period_id = p) = 4, 'additional pada APPROVED menambah sesi';
   assert (select status from public.schedule_periods where id = p) = 'APPROVED', 'status tetap APPROVED';
   assert (select jsonb_agg(x order by x->>'id') from jsonb_array_elements(before) x)
@@ -343,15 +343,15 @@ begin
   n := (select count(*) from public.scheduling_runs where period_id = p);
   perform public._t_expect_msg(format($q$select public.save_additional_schedule(%L, 11, '{}'::jsonb, %L::jsonb, '[]'::jsonb)$q$, p,
     jsonb_build_array(
-      jsonb_build_object('session_date', '2027-04-07', 'slot_no', 1, 'rombel_id', r2, 'subtest_id', s1, 'tutor_id', t1, 'room_id', ra),
-      jsonb_build_object('session_date', '2027-04-07', 'slot_no', 2, 'rombel_id', r2, 'subtest_id', s2, 'tutor_id', t1, 'room_id', ra))::text),
+      jsonb_build_object('session_date', '2055-04-07', 'slot_no', 1, 'rombel_id', r2, 'subtest_id', s1, 'tutor_id', t1, 'room_id', ra),
+      jsonb_build_object('session_date', '2055-04-07', 'slot_no', 2, 'rombel_id', r2, 'subtest_id', s2, 'tutor_id', t1, 'room_id', ra))::text),
     'P0001', 'COMPETENCY');   -- t1 tidak kompeten S2
   assert public._t_rows(p) = before, 'additional gagal: jadwal utuh';
   assert (select count(*) from public.scheduling_runs where period_id = p) = n, 'additional gagal: run tidak tercatat';
 
   -- Bentrok dengan sesi lama: ditolak oleh indeks unik dan semuanya dibatalkan.
   perform public._t_expect_msg(format($q$select public.save_additional_schedule(%L, 12, '{}'::jsonb, %L::jsonb, '[]'::jsonb)$q$, p,
-    jsonb_build_array(jsonb_build_object('session_date', '2027-04-05', 'slot_no', 1, 'rombel_id', r2, 'subtest_id', s1, 'tutor_id', t1, 'room_id', rb))::text),
+    jsonb_build_array(jsonb_build_object('session_date', '2055-04-05', 'slot_no', 1, 'rombel_id', r2, 'subtest_id', s1, 'tutor_id', t1, 'room_id', rb))::text),
     '23505', 'teaching_sessions_tutor_slot_key');
   assert public._t_rows(p) = before, 'bentrok: jadwal utuh';
 
@@ -361,7 +361,7 @@ begin
   set local role authenticated;
   assert (select count(*) from public.schedule_violations(p)) > 0, 'syarat: ada pelanggaran lama';
   perform public.save_additional_schedule(p, 13, '{}'::jsonb, jsonb_build_array(
-    jsonb_build_object('session_date', '2027-04-12', 'slot_no', 1, 'rombel_id', r3, 'subtest_id', s1, 'tutor_id', t1, 'room_id', rc)), '[]'::jsonb);
+    jsonb_build_object('session_date', '2055-04-12', 'slot_no', 1, 'rombel_id', r3, 'subtest_id', s1, 'tutor_id', t1, 'room_id', rc)), '[]'::jsonb);
   reset role;
   update public.rooms set capacity = 10 where id = ra;
 
@@ -384,7 +384,7 @@ declare p uuid;
 begin
   perform public._t_admin();
   set local role authenticated;
-  p := public.create_schedule_period('Uji Full Setelah Additional', date '2027-06-07', date '2027-06-13');
+  p := public.create_schedule_period('Uji Full Setelah Additional', date '2055-06-07', date '2055-06-13');
   reset role;
   update public.schedule_periods set status = 'GENERATED' where id = p;
   set local role authenticated;

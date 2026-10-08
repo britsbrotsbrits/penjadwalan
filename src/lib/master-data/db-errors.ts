@@ -23,6 +23,7 @@ export type MasterEntity =
   | "tutor"
   | "kompetensi"
   | "availability"
+  | "presensi"
   | "konfigurasi"
   | "distribusi"
   | "jadwal"
@@ -150,6 +151,9 @@ const BY_CONSTRAINT: ReadonlyArray<{ constraint: string; message: string }> = [
   },
 
   // Jadwal bertanggal (Phase 10)
+  // Presensi (Phase 13)
+  { constraint: "attendance_tutor_slot_key", message: "Mentor itu sudah tercatat mengajar pada tanggal dan sesi yang sama." },
+  { constraint: "attendance_session_key", message: "Sesi ini sudah punya catatan presensi." },
   { constraint: "teaching_sessions_tutor_slot_key", message: "Mentor sudah mengajar pada tanggal dan sesi itu." },
   { constraint: "teaching_sessions_room_slot_key", message: "Ruangan sudah dipakai pada tanggal dan sesi itu." },
   { constraint: "teaching_sessions_rombel_slot_key", message: "Rombel sudah punya sesi pada tanggal dan sesi itu." },
@@ -172,6 +176,16 @@ const STATUS_LABEL: Readonly<Record<string, string>> = {
   CANCELLED: "Cancelled",
 };
 
+const ATT_TOKENS: ReadonlyArray<{ token: string; message: string }> = [
+  { token: "ATT_NOT_YOUR_SESSION", message: "Sesi ini bukan jadwal Anda. Pilih TUKAR atau MENGGANTIKAN dan sebutkan mentor lawannya." },
+  { token: "ATT_NOT_TODAY", message: "Presensi hanya bisa diisi pada hari sesi itu." },
+  { token: "ATT_PERIOD_NOT_FINAL", message: "Jadwal sesi ini belum disetujui admin, jadi belum bisa diabsen." },
+  { token: "ATT_SESSION_NOT_FOUND", message: "Sesi tidak ditemukan atau sudah dibatalkan." },
+  { token: "ATT_OTHER_REQUIRED", message: "Pilih mentor lawan untuk TUKAR atau MENGGANTIKAN." },
+  { token: "ATT_OTHER_NOT_ALLOWED", message: "HADIR tidak memakai mentor lawan." },
+  { token: "ATT_OTHER_INVALID", message: "Mentor lawan tidak valid." },
+];
+
 export function mapDbError(error: DbErrorLike, entity: MasterEntity): string {
   const text = `${error.message ?? ""} ${error.details ?? ""}`;
 
@@ -182,6 +196,9 @@ export function mapDbError(error: DbErrorLike, entity: MasterEntity): string {
   if (notEditable) {
     return `Jadwal berstatus ${STATUS_LABEL[notEditable[1]!] ?? notEditable[1]} tidak dapat diubah.`;
   }
+  const already = /ATT_ALREADY:([A-Z]+)/.exec(text);
+  if (already) return `Sesi ini sudah dicatat sebagai ${already[1]}. Hubungi admin bila perlu dikoreksi.`;
+  for (const { token, message } of ATT_TOKENS) if (text.includes(token)) return message;
   const bad = /SCHED_BAD_TRANSITION:([A-Z]+):([A-Z]+)/.exec(text);
   if (bad) {
     return `Status ${STATUS_LABEL[bad[1]!] ?? bad[1]} tidak bisa langsung menjadi ${STATUS_LABEL[bad[2]!] ?? bad[2]}.`;

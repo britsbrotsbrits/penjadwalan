@@ -119,21 +119,21 @@ begin
     '{"sub":"00000000-0000-0000-0000-0000000000d1","role":"authenticated"}', true);
   set local role authenticated;
 
-  p := public.create_schedule_period('Uji Periode', date '2026-11-02', date '2026-11-15');
+  p := public.create_schedule_period('Uji Periode', date '2054-11-02', date '2054-11-15');
   assert (select status from public.schedule_periods where id = p) = 'DRAFT', 'periode baru berstatus DRAFT';
 
   perform public._t_expect_error(
-    $q$select public.create_schedule_period('Uji Periode', date '2027-01-01', date '2027-01-10')$q$, '23505');
+    $q$select public.create_schedule_period('Uji Periode', date '2055-01-01', date '2055-01-10')$q$, '23505');
   perform public._t_expect_error(
-    $q$select public.create_schedule_period('Uji Terbalik', date '2027-01-10', date '2027-01-01')$q$, '23514');
+    $q$select public.create_schedule_period('Uji Terbalik', date '2055-01-10', date '2055-01-01')$q$, '23514');
   perform public._t_expect_error(
-    $q$select public.create_schedule_period('Uji Terlalu Panjang', date '2027-01-01', date '2027-04-30')$q$, '23514');
+    $q$select public.create_schedule_period('Uji Terlalu Panjang', date '2055-01-01', date '2055-04-30')$q$, '23514');
   perform public._t_expect_error(
-    $q$select public.create_schedule_period('Uji Tumpang Tindih', date '2026-11-10', date '2026-11-20')$q$, '23P01');
+    $q$select public.create_schedule_period('Uji Tumpang Tindih', date '2054-11-10', date '2054-11-20')$q$, '23P01');
   perform public._t_expect_error(
-    $q$select public.create_schedule_period('   ', date '2027-02-01', date '2027-02-10')$q$, '23514');
+    $q$select public.create_schedule_period('   ', date '2055-02-01', date '2055-02-10')$q$, '23514');
   -- Tepat 92 hari boleh; batas dijaga constraint.
-  perform public.create_schedule_period('Uji 92 Hari', date '2027-02-01', date '2027-05-03');
+  perform public.create_schedule_period('Uji 92 Hari', date '2055-02-01', date '2055-05-03');
   assert (select count(*) from public.schedule_periods where name like 'Uji%') = 2, 'percobaan gagal tidak membuat baris';
   reset role;
   raise notice 'PASS 01 periode: dibuat DRAFT; nama unik, urutan tanggal, panjang maksimum, tidak tumpang tindih';
@@ -160,43 +160,43 @@ begin
     '{"sub":"00000000-0000-0000-0000-0000000000d1","role":"authenticated"}', true);
   set local role authenticated;
 
-  -- Senin 2 Nov 2026, sesi 1: SC 1 (3 siswa) + S1 + Tutor 1 + Ruang A (10)
-  sid := public.create_teaching_session(p, date '2026-11-02', 1::smallint, r1, s1, t1, ra);
+  -- Senin 2 Nov 2054, sesi 1: SC 1 (3 siswa) + S1 + Tutor 1 + Ruang A (10)
+  sid := public.create_teaching_session(p, date '2054-11-02', 1::smallint, r1, s1, t1, ra);
   assert (select source from public.teaching_sessions where id = sid) = 'MANUAL', 'sesi manual bertanda MANUAL';
   assert (select status from public.teaching_sessions where id = sid) = 'SCHEDULED', 'sesi baru SCHEDULED';
 
   select count(*) into n_before from public.teaching_sessions;
 
   -- Pelanggaran: tiap kasus ditolak P0001 dengan kode di pesan, dan tidak meninggalkan baris.
-  perform public._t_expect_msg(format($q$select public.create_teaching_session(%L, date '2026-11-03', 1::smallint, %L, %L, %L, %L)$q$,
+  perform public._t_expect_msg(format($q$select public.create_teaching_session(%L, date '2054-11-03', 1::smallint, %L, %L, %L, %L)$q$,
     p, r2, s2, t1, ra), 'P0001', 'COMPETENCY');
-  perform public._t_expect_msg(format($q$select public.create_teaching_session(%L, date '2026-11-03', 2::smallint, %L, %L, %L, %L)$q$,
+  perform public._t_expect_msg(format($q$select public.create_teaching_session(%L, date '2054-11-03', 2::smallint, %L, %L, %L, %L)$q$,
     p, r2, s1, t1, ra), 'P0001', 'AVAILABILITY');
-  perform public._t_expect_msg(format($q$select public.create_teaching_session(%L, date '2026-11-03', 1::smallint, %L, %L, %L, %L)$q$,
+  perform public._t_expect_msg(format($q$select public.create_teaching_session(%L, date '2054-11-03', 1::smallint, %L, %L, %L, %L)$q$,
     p, r1, s1, t1, rb), 'P0001', 'CAPACITY');      -- 3 siswa aktual > 2 kursi
-  perform public._t_expect_msg(format($q$select public.create_teaching_session(%L, date '2026-11-03', 1::smallint, %L, %L, %L, %L)$q$,
+  perform public._t_expect_msg(format($q$select public.create_teaching_session(%L, date '2054-11-03', 1::smallint, %L, %L, %L, %L)$q$,
     p, r2, s1, t1, rb), 'P0001', 'CAPACITY');      -- 0 siswa: ukuran standar 10 > 2 kursi
-  perform public._t_expect_msg(format($q$select public.create_teaching_session(%L, date '2026-11-03', 1::smallint, %L, %L, %L, %L)$q$,
+  perform public._t_expect_msg(format($q$select public.create_teaching_session(%L, date '2054-11-03', 1::smallint, %L, %L, %L, %L)$q$,
     p, r3, s1, t1, ra), 'P0001', 'FIXED_ROOM');    -- SC 3 wajib Ruang C
-  perform public._t_expect_msg(format($q$select public.create_teaching_session(%L, date '2026-11-08', 1::smallint, %L, %L, %L, %L)$q$,
+  perform public._t_expect_msg(format($q$select public.create_teaching_session(%L, date '2054-11-08', 1::smallint, %L, %L, %L, %L)$q$,
     p, r2, s1, t1, ra), 'P0001', 'DAY_INACTIVE');  -- Minggu
-  perform public._t_expect_msg(format($q$select public.create_teaching_session(%L, date '2026-12-07', 1::smallint, %L, %L, %L, %L)$q$,
+  perform public._t_expect_msg(format($q$select public.create_teaching_session(%L, date '2054-12-07', 1::smallint, %L, %L, %L, %L)$q$,
     p, r2, s1, t1, ra), 'P0001', 'OUT_OF_PERIOD');
   assert (select count(*) from public.teaching_sessions) = n_before, 'sesi yang ditolak tidak meninggalkan baris';
   raise notice 'PASS 02 sesi manual: kompetensi, availability, kapasitas (aktual & ukuran standar), ruangan tetap, hari nonaktif, di luar periode';
 
   -- Fallback ukuran standar: SC 2 tanpa siswa muat di Ruang A (10).
-  perform public.create_teaching_session(p, date '2026-11-03', 1::smallint, r2, s1, t1, ra);
+  perform public.create_teaching_session(p, date '2054-11-03', 1::smallint, r2, s1, t1, ra);
   -- Ruangan tetap benar diterima.
-  perform public.create_teaching_session(p, date '2026-11-02', 2::smallint, r3, s1, t1, rc);
+  perform public.create_teaching_session(p, date '2054-11-02', 2::smallint, r3, s1, t1, rc);
   raise notice 'PASS 03 sesi valid diterima (ukuran standar sebagai cadangan kapasitas; ruangan tetap benar)';
 
   -- Dobel: indeks unik adalah pertahanan terakhir.
-  perform public._t_expect_msg(format($q$select public.create_teaching_session(%L, date '2026-11-02', 1::smallint, %L, %L, %L, %L)$q$,
+  perform public._t_expect_msg(format($q$select public.create_teaching_session(%L, date '2054-11-02', 1::smallint, %L, %L, %L, %L)$q$,
     p, r2, s1, t1, rc), '23505', 'teaching_sessions_tutor_slot_key');
-  perform public._t_expect_msg(format($q$select public.create_teaching_session(%L, date '2026-11-02', 1::smallint, %L, %L, %L, %L)$q$,
+  perform public._t_expect_msg(format($q$select public.create_teaching_session(%L, date '2054-11-02', 1::smallint, %L, %L, %L, %L)$q$,
     p, r2, s1, t2, ra), '23505', 'teaching_sessions_room_slot_key');
-  perform public._t_expect_msg(format($q$select public.create_teaching_session(%L, date '2026-11-02', 1::smallint, %L, %L, %L, %L)$q$,
+  perform public._t_expect_msg(format($q$select public.create_teaching_session(%L, date '2054-11-02', 1::smallint, %L, %L, %L, %L)$q$,
     p, r1, s1, t2, rc), '23505', 'teaching_sessions_rombel_slot_key');
   reset role;
   raise notice 'PASS 04 tutor, ruangan, dan rombel tidak bisa dobel pada tanggal+sesi yang sama';
@@ -219,35 +219,35 @@ begin
     '{"sub":"00000000-0000-0000-0000-0000000000d1","role":"authenticated"}', true);
   set local role authenticated;
   select id into sid from public.teaching_sessions
-   where rombel_id = r1 and session_date = date '2026-11-02' and slot_no = 1;
+   where rombel_id = r1 and session_date = date '2054-11-02' and slot_no = 1;
 
   -- Ganti tutor + subtes ke Tutor 2 (kompeten S2, tersedia Senin sesi 1): valid.
-  perform public.update_teaching_session(sid, date '2026-11-02', 1::smallint, s2, t2, ra);
+  perform public.update_teaching_session(sid, date '2054-11-02', 1::smallint, s2, t2, ra);
   assert (select tutor_id from public.teaching_sessions where id = sid) = t2, 'tutor berganti';
   assert (select subtest_id from public.teaching_sessions where id = sid) = s2, 'subtes berganti';
 
   -- Pindah ke Senin sesi 2: Tutor 2 tidak tersedia -> ditolak dan data tidak berubah.
-  perform public._t_expect_msg(format($q$select public.update_teaching_session(%L, date '2026-11-02', 2::smallint, %L, %L, %L)$q$,
+  perform public._t_expect_msg(format($q$select public.update_teaching_session(%L, date '2054-11-02', 2::smallint, %L, %L, %L)$q$,
     sid, s2, t2, ra), 'P0001', 'AVAILABILITY');
   assert (select slot_no from public.teaching_sessions where id = sid) = 1, 'update yang ditolak dibatalkan seluruhnya';
   -- Ganti ruangan ke yang terlalu kecil: ditolak.
-  perform public._t_expect_msg(format($q$select public.update_teaching_session(%L, date '2026-11-02', 1::smallint, %L, %L, %L)$q$,
+  perform public._t_expect_msg(format($q$select public.update_teaching_session(%L, date '2054-11-02', 1::smallint, %L, %L, %L)$q$,
     sid, s2, t2, rb), 'P0001', 'CAPACITY');
   assert (select room_id from public.teaching_sessions where id = sid) = ra, 'ruangan tetap seperti semula';
   -- Pindah ke Senin sesi 2 bersama Tutor 1, yang sudah mengajar SC 3 di sana: bentrok tutor.
-  perform public._t_expect_msg(format($q$select public.update_teaching_session(%L, date '2026-11-02', 2::smallint, %L, %L, %L)$q$,
+  perform public._t_expect_msg(format($q$select public.update_teaching_session(%L, date '2054-11-02', 2::smallint, %L, %L, %L)$q$,
     sid, s1, t1, ra), '23505', 'teaching_sessions_tutor_slot_key');
   assert (select slot_no from public.teaching_sessions where id = sid) = 1, 'bentrok tidak mengubah data';
-  perform public._t_expect_error(format($q$select public.update_teaching_session(%L, date '2026-11-02', 1::smallint, %L, %L, %L)$q$,
+  perform public._t_expect_error(format($q$select public.update_teaching_session(%L, date '2054-11-02', 1::smallint, %L, %L, %L)$q$,
     gen_random_uuid(), s1, t1, ra), 'P0002');
   raise notice 'PASS 05 ubah sesi: berhasil bila valid; pelanggaran/bentrok ditolak dan data tetap utuh';
 
   -- Batalkan membebaskan slot.
   perform public.cancel_teaching_session(sid);
   assert (select status from public.teaching_sessions where id = sid) = 'CANCELLED', 'sesi dibatalkan';
-  perform public.create_teaching_session(p, date '2026-11-02', 1::smallint, r1, s1, t1, ra);
+  perform public.create_teaching_session(p, date '2054-11-02', 1::smallint, r1, s1, t1, ra);
   perform public._t_expect_error(format($q$select public.cancel_teaching_session(%L)$q$, sid), 'P0002');
-  perform public._t_expect_error(format($q$select public.update_teaching_session(%L, date '2026-11-02', 1::smallint, %L, %L, %L)$q$,
+  perform public._t_expect_error(format($q$select public.update_teaching_session(%L, date '2054-11-02', 1::smallint, %L, %L, %L)$q$,
     sid, s1, t1, ra), 'P0002');
   reset role;
   raise notice 'PASS 06 batalkan: slot bebas dipakai lagi; sesi dibatalkan tidak bisa diubah/dibatalkan lagi';
@@ -274,20 +274,20 @@ begin
     update public.schedule_periods set status = st where id = p;
     set local role authenticated;
     perform public.cancel_teaching_session(
-      public.create_teaching_session(p, date '2026-11-10', 1::smallint, r2, s1, t1, ra));
+      public.create_teaching_session(p, date '2054-11-10', 1::smallint, r2, s1, t1, ra));
   end loop;
 
   foreach st in array array['APPROVED', 'LOCKED', 'CANCELLED'] loop
     reset role;
     update public.schedule_periods set status = st where id = p;
     set local role authenticated;
-    perform public._t_expect_msg(format($q$select public.create_teaching_session(%L, date '2026-11-10', 1::smallint, %L, %L, %L, %L)$q$,
+    perform public._t_expect_msg(format($q$select public.create_teaching_session(%L, date '2054-11-10', 1::smallint, %L, %L, %L, %L)$q$,
       p, r2, s1, t1, ra), '55000', 'SCHED_NOT_EDITABLE:' || st);
-    perform public._t_expect_error(format($q$select public.update_teaching_session(%L, date '2026-11-02', 1::smallint, %L, %L, %L)$q$,
+    perform public._t_expect_error(format($q$select public.update_teaching_session(%L, date '2054-11-02', 1::smallint, %L, %L, %L)$q$,
       sid, s1, t1, ra), '55000');
     perform public._t_expect_error(format($q$select public.cancel_teaching_session(%L)$q$, sid), '55000');
     perform public._t_expect_error(format($q$select public.save_generated_schedule(%L, 1, '{}'::jsonb, '[]'::jsonb, '[]'::jsonb)$q$, p), '55000');
-    perform public._t_expect_error(format($q$select public.update_schedule_period(%L, 'Uji Periode', date '2026-11-02', date '2026-11-15')$q$, p), '55000');
+    perform public._t_expect_error(format($q$select public.update_schedule_period(%L, 'Uji Periode', date '2054-11-02', date '2054-11-15')$q$, p), '55000');
   end loop;
   reset role;
   assert (select status from public.teaching_sessions where id = sid) = 'SCHEDULED', 'sesi di periode terkunci tidak berubah';
@@ -317,9 +317,9 @@ begin
   select array_agg(id order by id) into before_ids from public.teaching_sessions where period_id = p;
 
   good := jsonb_build_array(
-    jsonb_build_object('session_date', '2026-11-02', 'slot_no', 1, 'rombel_id', r1, 'subtest_id', s1, 'tutor_id', t1, 'room_id', ra),
-    jsonb_build_object('session_date', '2026-11-09', 'slot_no', 1, 'rombel_id', r1, 'subtest_id', s1, 'tutor_id', t1, 'room_id', ra),
-    jsonb_build_object('session_date', '2026-11-02', 'slot_no', 1, 'rombel_id', r2, 'subtest_id', s2, 'tutor_id', t2, 'room_id', ra));
+    jsonb_build_object('session_date', '2054-11-02', 'slot_no', 1, 'rombel_id', r1, 'subtest_id', s1, 'tutor_id', t1, 'room_id', ra),
+    jsonb_build_object('session_date', '2054-11-09', 'slot_no', 1, 'rombel_id', r1, 'subtest_id', s1, 'tutor_id', t1, 'room_id', ra),
+    jsonb_build_object('session_date', '2054-11-02', 'slot_no', 1, 'rombel_id', r2, 'subtest_id', s2, 'tutor_id', t2, 'room_id', ra));
   -- Baris ke-3 di atas memakai Ruang A yang sama dengan baris 1 pada tanggal+sesi sama -> dobel ruangan.
   perform public._t_expect_msg(
     format($q$select public.save_generated_schedule(%L, 7, '{}'::jsonb, %L::jsonb, '[]'::jsonb)$q$, p, good::text),
@@ -329,7 +329,7 @@ begin
   assert (select count(*) from public.scheduling_runs where period_id = p) = 0, 'run yang gagal tidak tercatat';
 
   bad := jsonb_build_array(
-    jsonb_build_object('session_date', '2026-11-02', 'slot_no', 1, 'rombel_id', r1, 'subtest_id', s1, 'tutor_id', t1, 'room_id', rb));
+    jsonb_build_object('session_date', '2054-11-02', 'slot_no', 1, 'rombel_id', r1, 'subtest_id', s1, 'tutor_id', t1, 'room_id', rb));
   perform public._t_expect_msg(
     format($q$select public.save_generated_schedule(%L, 7, '{}'::jsonb, %L::jsonb, '[]'::jsonb)$q$, p, bad::text),
     'P0001', 'CAPACITY');
@@ -353,8 +353,8 @@ begin
 
   -- Berhasil: ganti seluruh isi periode.
   good := jsonb_build_array(
-    jsonb_build_object('session_date', '2026-11-02', 'slot_no', 1, 'rombel_id', r1, 'subtest_id', s1, 'tutor_id', t1, 'room_id', ra),
-    jsonb_build_object('session_date', '2026-11-09', 'slot_no', 1, 'rombel_id', r1, 'subtest_id', s1, 'tutor_id', t1, 'room_id', ra));
+    jsonb_build_object('session_date', '2054-11-02', 'slot_no', 1, 'rombel_id', r1, 'subtest_id', s1, 'tutor_id', t1, 'room_id', ra),
+    jsonb_build_object('session_date', '2054-11-09', 'slot_no', 1, 'rombel_id', r1, 'subtest_id', s1, 'tutor_id', t1, 'room_id', ra));
   unsched := jsonb_build_array(
     jsonb_build_object('rombel_id', r2, 'label', 'Subtes Uji 2', 'subtest_ids', jsonb_build_array(s2),
       'missing_per_week', 2, 'reason_code', 'NO_AVAILABLE_TUTOR_SLOT', 'detail', 'Uji'));
@@ -387,7 +387,7 @@ begin
   perform set_config('request.jwt.claims',
     '{"sub":"00000000-0000-0000-0000-0000000000d1","role":"authenticated"}', true);
   set local role authenticated;
-  sid := public.create_teaching_session(p, date '2026-11-02', 1::smallint, r1, s1, t1, ra);
+  sid := public.create_teaching_session(p, date '2054-11-02', 1::smallint, r1, s1, t1, ra);
   assert (select count(*) from public.schedule_violations(p)) = 0, 'jadwal valid: laporan kosong';
   reset role;
 
@@ -411,17 +411,17 @@ begin
   perform set_config('request.jwt.claims',
     '{"sub":"00000000-0000-0000-0000-0000000000d1","role":"authenticated"}', true);
   set local role authenticated;
-  perform public.update_schedule_period(p, 'Uji Periode Baru', date '2026-11-02', date '2026-11-20');
+  perform public.update_schedule_period(p, 'Uji Periode Baru', date '2054-11-02', date '2054-11-20');
   assert (select name from public.schedule_periods where id = p) = 'Uji Periode Baru', 'nama berubah';
   -- Sesi ada pada 2 Nov: rentang baru yang mengecualikannya ditolak.
   perform public._t_expect_msg(
-    format($q$select public.update_schedule_period(%L, 'Uji Periode Baru', date '2026-11-03', date '2026-11-20')$q$, p),
+    format($q$select public.update_schedule_period(%L, 'Uji Periode Baru', date '2054-11-03', date '2054-11-20')$q$, p),
     'P0001', 'SCHED_SESSIONS_OUTSIDE_RANGE');
   perform public._t_expect_error(
-    format($q$select public.update_schedule_period(%L, 'Uji Periode Baru', date '2026-11-02', date '2027-03-01')$q$, p), '23514');
+    format($q$select public.update_schedule_period(%L, 'Uji Periode Baru', date '2054-11-02', date '2055-03-01')$q$, p), '23514');
   perform public._t_expect_error(
-    format($q$select public.update_schedule_period(%L, 'x', date '2026-11-02', date '2026-11-20')$q$, gen_random_uuid()), 'P0002');
-  assert (select end_date from public.schedule_periods where id = p) = date '2026-11-20', 'percobaan gagal tidak mengubah tanggal';
+    format($q$select public.update_schedule_period(%L, 'x', date '2054-11-02', date '2054-11-20')$q$, gen_random_uuid()), 'P0002');
+  assert (select end_date from public.schedule_periods where id = p) = date '2054-11-20', 'percobaan gagal tidak mengubah tanggal';
   reset role;
   raise notice 'PASS 10 ubah periode: nama bebas; tanggal tidak boleh mengecualikan sesi yang ada';
 end $$;
@@ -446,7 +446,7 @@ begin
   assert (select count(*) from public.teaching_sessions) >= 1, 'admin membaca sesi';
   assert (select count(*) from public.schedule_periods) >= 1, 'admin membaca periode';
   perform public._t_expect_error(format($q$insert into public.teaching_sessions (period_id, session_date, slot_no, rombel_id, subtest_id, tutor_id, room_id)
-    values (%L, date '2026-11-05', 1, %L, %L, %L, %L)$q$, p, r1, s1, t1, ra), '42501');
+    values (%L, date '2054-11-05', 1, %L, %L, %L, %L)$q$, p, r1, s1, t1, ra), '42501');
   perform public._t_expect_error(format($q$update public.teaching_sessions set room_id = %L where id = %L$q$, ra, sid), '42501');
   perform public._t_expect_error(format($q$delete from public.teaching_sessions where id = %L$q$, sid), '42501');
   perform public._t_expect_error(format($q$update public.schedule_periods set status = 'LOCKED' where id = %L$q$, p), '42501');
@@ -462,12 +462,12 @@ begin
   assert (select count(*) from public.schedule_periods) = 0, 'tutor tidak melihat periode';
   assert (select count(*) from public.scheduling_runs) = 0, 'tutor tidak melihat run';
   assert (select count(*) from public.unscheduled_requirements) = 0, 'tutor tidak melihat kebutuhan belum terpenuhi';
-  perform public._t_expect_error(format($q$select public.create_teaching_session(%L, date '2026-11-05', 1::smallint, %L, %L, %L, %L)$q$, p, r1, s1, t1, ra), '42501');
-  perform public._t_expect_error(format($q$select public.update_teaching_session(%L, date '2026-11-05', 1::smallint, %L, %L, %L)$q$, sid, s1, t1, ra), '42501');
+  perform public._t_expect_error(format($q$select public.create_teaching_session(%L, date '2054-11-05', 1::smallint, %L, %L, %L, %L)$q$, p, r1, s1, t1, ra), '42501');
+  perform public._t_expect_error(format($q$select public.update_teaching_session(%L, date '2054-11-05', 1::smallint, %L, %L, %L)$q$, sid, s1, t1, ra), '42501');
   perform public._t_expect_error(format($q$select public.cancel_teaching_session(%L)$q$, sid), '42501');
   perform public._t_expect_error(format($q$select public.save_generated_schedule(%L, 1, '{}'::jsonb, '[]'::jsonb, '[]'::jsonb)$q$, p), '42501');
   perform public._t_expect_error($q$select public.create_schedule_period('Tutor', date '2031-01-01', date '2031-01-05')$q$, '42501');
-  perform public._t_expect_error(format($q$select public.update_schedule_period(%L, 'x', date '2026-11-02', date '2026-11-20')$q$, p), '42501');
+  perform public._t_expect_error(format($q$select public.update_schedule_period(%L, 'x', date '2054-11-02', date '2054-11-20')$q$, p), '42501');
   perform public._t_expect_error(format($q$select * from public.schedule_violations(%L)$q$, p), '42501');
   perform public._t_expect_error(format($q$select * from public._schedule_violations(%L, null)$q$, p), '42501');
   reset role;

@@ -227,4 +227,14 @@ describe("mapDbError: jadwal bertanggal (Phase 10)", () => {
     expect(mapDbError({ code: "P0001", message: "SCHED_APPROVE_VIOLATIONS:3" }, "periode jadwal")).toContain("3 pelanggaran");
     expect(mapDbError({ code: "55000", message: "SCHED_ADDITIONAL_NOT_ALLOWED:LOCKED" }, "periode jadwal")).toContain("status sekarang: Locked");
   });
+
+  it("memetakan token dan constraint presensi (Phase 13)", () => {
+    expect(mapDbError({ code: "23505", message: "ATT_ALREADY:TUKAR" }, "presensi")).toContain("sudah dicatat sebagai TUKAR");
+    expect(mapDbError({ code: "P0001", message: "ATT_NOT_YOUR_SESSION" }, "presensi")).toContain("bukan jadwal Anda");
+    expect(mapDbError({ code: "55000", message: "ATT_NOT_TODAY" }, "presensi")).toContain("hari sesi");
+    expect(mapDbError({ code: "55000", message: "ATT_PERIOD_NOT_FINAL" }, "presensi")).toContain("belum disetujui");
+    expect(mapDbError({ code: "22023", message: "ATT_OTHER_REQUIRED" }, "presensi")).toContain("mentor lawan");
+    expect(mapDbError({ code: "23505", message: 'duplicate key value violates unique constraint "attendance_tutor_slot_key"' }, "presensi")).toContain("sudah tercatat mengajar");
+    expect(mapDbError({ code: "23505", message: 'violates unique constraint "attendance_session_key"' }, "presensi")).toContain("sudah punya catatan");
+  });
 });

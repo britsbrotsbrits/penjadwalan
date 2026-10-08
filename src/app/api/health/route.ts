@@ -4,5 +4,5 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 export function GET() {
-  return NextResponse.json({ status: "ok", phase: 12 });
+  return NextResponse.json({ status: "ok", phase: 13 });
 }

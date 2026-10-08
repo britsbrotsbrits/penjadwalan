@@ -12,7 +12,7 @@ export default async function TutorHomePage() {
       <div>
         <h1 className="text-2xl font-semibold">Dashboard Mentor</h1>
         <p className="mt-2 text-sm opacity-70">
-          Lihat jadwal mengajar Anda dan isi availability. Absensi dibangun di phase berikutnya.
+          Lihat jadwal mengajar Anda dan isi availability. Isi presensi hari ini di menu Presensi.
         </p>
       </div>
 
@@ -26,6 +26,12 @@ export default async function TutorHomePage() {
             </p>
           ) : null}
           <ul className="grid gap-3 sm:grid-cols-2">
+            <li>
+              <Link href="/tutor/absensi" className="block rounded border border-current/20 p-4 hover:border-current/50">
+                <span className="font-medium">Presensi</span>
+                <span className="mt-1 block text-sm opacity-70">Isi presensi sesi hari ini: hadir, tukar, atau menggantikan.</span>
+              </Link>
+            </li>
             <li>
               <Link href="/tutor/jadwal" className="block rounded border border-current/20 p-4 hover:border-current/50">
                 <span className="font-medium">Jadwal saya</span>

@@ -6,7 +6,8 @@ import { Icon, type IconName } from "./icons";
 
 const ITEMS: ReadonlyArray<{ href: string; label: string; icon: IconName; exact?: boolean }> = [
   { href: "/tutor", label: "Beranda", icon: "home", exact: true },
-  { href: "/tutor/availability", label: "Availability", icon: "calendar" },
+  { href: "/tutor/jadwal", label: "Jadwal", icon: "calendar" },
+  { href: "/tutor/availability", label: "Availability", icon: "clock" },
 ];
 
 export function TutorBottomNav() {

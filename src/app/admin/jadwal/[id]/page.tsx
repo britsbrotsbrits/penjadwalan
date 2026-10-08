@@ -183,7 +183,14 @@ export default async function SchedulePeriodPage({
       <PageHeader
         title={period.name}
         description={`${period.startDate} s/d ${period.endDate}`}
-        actions={<Badge tone={PERIOD_STATUS_TONE[period.status]}>{PERIOD_STATUS_LABEL[period.status]}</Badge>}
+        actions={
+          <>
+            <Link href={`/admin/jadwal/${period.id}/tabel`} className={secondaryButtonClass}>
+              Tabel jadwal (PDF/PNG)
+            </Link>
+            <Badge tone={PERIOD_STATUS_TONE[period.status]}>{PERIOD_STATUS_LABEL[period.status]}</Badge>
+          </>
+        }
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

@@ -134,6 +134,13 @@ Tidak ada SQL di fase ini. Engine murni (tanpa database) di `src/lib/scheduler`,
 - **Generate Additional** (`save_additional_schedule`, `schedule/additional.ts`): hanya pada GENERATED/APPROVED. Sesi yang ada dijadikan pola mingguan dan dibekukan (`SchedulerInput.frozen`: hanya mengisi hunian, tidak pernah dipindahkan); kebutuhan dikurangi sesi yang ada; hanya sisanya dijadwalkan. Sesi lama tidak pernah diubah atau dihapus, status periode tidak berubah, sesi baru bertanda `ADDITIONAL`. Hanya sesi baru yang divalidasi (pelanggaran lama tidak menghalangi). Pola dipakai konservatif: sel hari/sesi yang dipakai sesi lama pada tanggal mana pun dianggap terisi.
 - **Belum ada:** audit log perubahan status dan override (Phase 17).
 
+## Tabel jadwal dan ekspor (Phase 12)
+
+- **Tabel mingguan** (`schedule/grid.ts`, murni): baris = sesi (dengan jam), kolom = hari aktif; sel berisi sesi, tanda **√** (mentor tersedia tetapi belum ada kelas; hanya tampilan mentor, tidak di luar periode), kosong, atau di luar periode.
+- **Admin:** `/admin/jadwal/[id]/tabel`, pilih mentor atau kelas lalu navigasi minggu. **Mentor:** `/tutor/jadwal`, hanya jadwal sendiri dari periode Approved/Locked lewat RPC `my_schedule` (mentor tidak punya akses baca ke tabel jadwal).
+- **Ekspor:** satu sumber `schedule/grid-svg.ts` (SVG mandiri). PNG = SVG digambar ke canvas lalu diunduh; PDF = dialog cetak browser (A4 landscape, pilih "Simpan sebagai PDF"). Tanpa dependensi tambahan.
+- **Belum ada:** jam khusus per hari (mis. Jumat), keterangan ruangan/lantai, ekspor massal semua mentor sekaligus.
+
 ## Tes RLS
 
 File di `supabase/tests/`:
@@ -146,6 +153,7 @@ File di `supabase/tests/`:
 | `tutors_rls.test.sql` | 16 kelompok kasus Phase 5: anon, tutor A/B, tutor nonaktif, admin; isolasi rate, eskalasi, fungsi availability/kompetensi/update tutor, constraint, cascade |
 | `fixed_room.test.sql` | 7 kelompok kasus Phase 6: ruangan tetap harus aktif, ganti/kosongkan, berbagi ruangan, kapasitas tidak dipaksa, ruangan dinonaktifkan, tanpa DELETE, tutor/anon |
 | `academic_config.test.sql` | 11 kelompok kasus Phase 7: nilai per level, upsert, validasi nilai/scope/hari, clear, distribusi (item fleksibel, penggantian atomik, input buruk), tanpa tulis langsung, tutor/anon |
+| `tutor_schedule.test.sql` | 1 kelompok kasus Phase 12: `my_schedule` (hanya sesi sendiri, hanya Approved/Locked, sesi batal tersembunyi, batas rentang, admin/anon ditolak) |
 | `schedule_status.test.sql` | 9 kelompok kasus Phase 11: 25 pasangan transisi status, syarat approve, proteksi APPROVED/LOCKED, cancel membebaskan slot, Generate Additional (hanya menambah, sesi lama utuh, atomik, validasi hanya sesi baru), hak akses |
 | `schedule.test.sql` | 11 kelompok kasus Phase 10: periode (unik, urutan, panjang, tumpang tindih), sesi manual (semua aturan), dobel, ubah/batalkan, proteksi status, generate atomik, laporan validasi, ubah periode, hak akses |
 

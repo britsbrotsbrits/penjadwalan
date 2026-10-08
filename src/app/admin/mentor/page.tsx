@@ -1,8 +1,8 @@
 import { requireRole } from "@/lib/auth/session";
 import { ActionForm } from "@/components/action-form";
-import { headerCellClass, inputClass, rowClass } from "@/components/form-styles";
+import { headerCellClass, inputClass, rowClass, selectClass } from "@/components/form-styles";
 import { tutorDisplayName } from "@/lib/tutors/labels";
-import { updateTutorAction } from "@/server/tutors/actions";
+import { addTutorAction, updateTutorAction, updateTutorEmailAction } from "@/server/tutors/actions";
 import { getAccountEmails, listTutorAccounts, listTutorProfiles } from "@/server/tutors/queries";
 
 const GRID = "grid-cols-[minmax(11rem,1fr)_13rem_6rem_8rem_5rem_9rem_auto]";
@@ -25,12 +25,77 @@ export default async function MentorPage() {
       <div>
         <h1 className="text-2xl font-semibold">Daftar Mentor</h1>
         <p className="mt-1 max-w-3xl text-sm opacity-70">
-          Mentor (tutor) muncul di sini otomatis begitu akunnya dibuat di Supabase (Authentication → Users).
-          Akun baru berstatus <strong>nonaktif</strong> dan <strong>belum dapat dijadwalkan</strong> sampai
+          Tambahkan mentor lewat formulir di bawah (tidak perlu membuka Supabase). Akun baru berstatus <strong>nonaktif</strong> dan <strong>belum dapat dijadwalkan</strong> sampai
           Anda mengisi nama, level, dan rate lalu mencentang kedua kotak. Akun dan mentor tidak dihapus,
           hanya dinonaktifkan.
         </p>
       </div>
+
+      <section aria-label="Tambah mentor" className="rounded border border-current/20 p-4">
+        <h2 className="text-lg font-semibold">Tambah mentor</h2>
+        <p className="mt-1 max-w-3xl text-sm opacity-70">
+          Membuat akun login dan data mentor sekaligus, tanpa membuka Supabase. Dengan &quot;kirim email undangan&quot;,
+          mentor menerima email untuk menetapkan password sendiri. Kompetensi dan availability diisi di menu masing-masing.
+        </p>
+        <ActionForm action={addTutorAction} submitLabel="Tambah mentor" resetOnSuccess className="mt-3 flex flex-col gap-3">
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="flex min-w-52 flex-col gap-1 text-sm">
+              Nama lengkap
+              <input name="fullName" required maxLength={200} className={inputClass} />
+            </label>
+            <label className="flex min-w-64 flex-col gap-1 text-sm">
+              Email
+              <input name="email" type="email" required maxLength={254} className={inputClass} />
+            </label>
+            <label className="flex w-24 flex-col gap-1 text-sm">
+              Level
+              <input name="level" type="number" min={0} max={99} defaultValue={0} required className={inputClass} />
+            </label>
+            <label className="flex w-40 flex-col gap-1 text-sm">
+              Rate (Rp/sesi)
+              <input name="rate" inputMode="numeric" placeholder="opsional" className={inputClass} />
+            </label>
+          </div>
+          <div className="flex flex-wrap gap-5 text-sm">
+            <label className="flex items-center gap-2">
+              <input name="schedulable" type="checkbox" defaultChecked /> Dapat dijadwalkan
+            </label>
+            <label className="flex items-center gap-2">
+              <input name="sendInvite" type="checkbox" defaultChecked /> Kirim email undangan
+            </label>
+          </div>
+        </ActionForm>
+      </section>
+
+      <section aria-label="Ubah email mentor" className="rounded border border-current/20 p-4">
+        <h2 className="text-lg font-semibold">Ubah email mentor</h2>
+        <p className="mt-1 max-w-3xl text-sm opacity-70">
+          Untuk mengganti email sementara (misalnya nama@sementara.local) dengan email asli. Centang kirim email atur-password
+          supaya mentor bisa membuat password dan login.
+        </p>
+        <ActionForm action={updateTutorEmailAction} submitLabel="Simpan email" className="mt-3 flex flex-col gap-3">
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="flex min-w-52 flex-col gap-1 text-sm">
+              Mentor
+              <select name="tutorId" required className={selectClass}>
+                <option value="">(pilih mentor)</option>
+                {rows.map(({ account, profile }) => (
+                  <option key={profile.id} value={profile.id}>
+                    {tutorDisplayName(account.fullName, emails.get(account.id) ?? null)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex min-w-64 flex-col gap-1 text-sm">
+              Email baru
+              <input name="email" type="email" required maxLength={254} className={inputClass} />
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input name="sendReset" type="checkbox" defaultChecked /> Kirim email atur-password
+            </label>
+          </div>
+        </ActionForm>
+      </section>
 
       <section aria-label="Penjelasan kolom" className="rounded border border-current/20 p-4 text-sm">
         <ul className="flex list-disc flex-col gap-1 pl-5">

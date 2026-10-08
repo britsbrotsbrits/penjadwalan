@@ -109,3 +109,34 @@ describe("baris DB", () => {
     expect(availabilityRowSchema.safeParse({ tutor_id: ID, day_of_week: "3", slot_no: 4, available: true }).success).toBe(false);
   });
 });
+
+import { tutorCreateSchema, tutorEmailSchema } from "./schemas";
+
+describe("tutorCreateSchema dan tutorEmailSchema (Phase 13b)", () => {
+  const base = { fullName: " Prast ", email: " Prast@Example.COM ", level: "3", rate: "", schedulable: "on", sendInvite: "on" };
+  it("menormalkan nama dan email; rate kosong = null; kotak centang", () => {
+    const r = tutorCreateSchema.safeParse(base);
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data.fullName).toBe("Prast");
+      expect(r.data.email).toBe("prast@example.com");
+      expect(r.data.rate).toBeNull();
+      expect(r.data.schedulable).toBe(true);
+    }
+    const off = tutorCreateSchema.safeParse({ ...base, schedulable: undefined, sendInvite: undefined });
+    expect(off.success && off.data.sendInvite).toBe(false);
+  });
+  it("menolak nama kosong, email tidak valid, level di luar 0..99, rate tidak valid", () => {
+    expect(tutorCreateSchema.safeParse({ ...base, fullName: " " }).success).toBe(false);
+    expect(tutorCreateSchema.safeParse({ ...base, email: "bukan-email" }).success).toBe(false);
+    expect(tutorCreateSchema.safeParse({ ...base, email: "" }).success).toBe(false);
+    expect(tutorCreateSchema.safeParse({ ...base, level: "100" }).success).toBe(false);
+    expect(tutorCreateSchema.safeParse({ ...base, rate: "1.000" }).success).toBe(false);
+  });
+  it("ganti email", () => {
+    const id = "11111111-1111-4111-8111-111111111111";
+    expect(tutorEmailSchema.safeParse({ tutorId: id, email: "a@b.co", sendReset: "on" }).success).toBe(true);
+    expect(tutorEmailSchema.safeParse({ tutorId: "x", email: "a@b.co" }).success).toBe(false);
+    expect(tutorEmailSchema.safeParse({ tutorId: id, email: "a@b" }).success).toBe(false);
+  });
+});

@@ -31,6 +31,35 @@ export const tutorUpdateSchema = z.object({
   schedulable: checkbox,
 });
 
+const emailField = z
+  .string({ required_error: "Email wajib diisi." })
+  .trim()
+  .toLowerCase()
+  .min(1, "Email wajib diisi.")
+  .max(254, "Email terlalu panjang.")
+  .email("Format email tidak valid.");
+
+/** Tambah mentor baru dari aplikasi (akun login dibuat lewat Supabase Auth Admin API). */
+export const tutorCreateSchema = z.object({
+  fullName: z
+    .string({ required_error: "Nama wajib diisi.", invalid_type_error: "Nama tidak valid." })
+    .trim()
+    .min(1, "Nama wajib diisi.")
+    .max(200, "Nama maksimal 200 karakter."),
+  email: emailField,
+  level: intField("Level", 0, 99),
+  rate: rateField,
+  schedulable: checkbox,
+  sendInvite: checkbox,
+});
+
+/** Ganti email akun mentor (mis. dari email sementara ke email asli). */
+export const tutorEmailSchema = z.object({
+  tutorId: idSchema,
+  email: emailField,
+  sendReset: checkbox,
+});
+
 export const competenciesSchema = z.object({
   tutorId: idSchema,
   subtestIds: z

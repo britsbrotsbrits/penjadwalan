@@ -239,3 +239,11 @@ Modul bertanda **engine murni** dilarang mengimpor Supabase, React, atau Next. A
 Token desain (warna, font Inter, ukuran heading) ada di `src/app/globals.css`. Komponen bersama:
 `components/{icons,brand,ui}.tsx` (Icon, Brand, PageHeader, Card, Badge, StatCard), `form-styles.ts`,
 `admin-nav.tsx` (sidebar navy), `tutor-bottom-nav.tsx`. Logo resmi: letakkan di `public/` lalu ubah `components/brand.tsx`.
+
+## Tambah mentor dari aplikasi (Phase 13b)
+
+Menu **Admin → Mentor** kini punya formulir **Tambah mentor** (nama, email, level, rate, dapat dijadwalkan, kirim email undangan) dan **Ubah email mentor**.
+- Akun dibuat lewat Supabase Auth Admin API di server (`src/lib/supabase/admin.ts`, memakai `SUPABASE_SERVICE_ROLE_KEY`, hanya setelah `requireRole(["admin"])`). Kunci ini tidak boleh berawalan `NEXT_PUBLIC_`.
+- Alur: buat akun → profil dijadikan role `tutor` aktif → `admin_update_tutor` mengisi level/rate/dapat-dijadwalkan. Bila langkah setelah pembuatan akun gagal, akun dihapus kembali (rollback).
+- Tanpa email undangan: akun dibuat terkonfirmasi tanpa password; kirim email atur-password lewat **Ubah email**.
+- Tidak ada fitur hapus akun di UI.

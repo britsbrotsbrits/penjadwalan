@@ -7,7 +7,8 @@ import { mapDbError, type DbErrorLike, type MasterEntity } from "@/lib/master-da
 import { fail, ok, type FormState } from "@/lib/master-data/form-state";
 import { firstIssueMessage } from "@/lib/master-data/schemas";
 import { buildAvailabilityPayload } from "@/lib/tutors/availability";
-import { competenciesSchema, tutorUpdateSchema } from "@/lib/tutors/schemas";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { competenciesSchema, tutorCreateSchema, tutorEmailSchema, tutorUpdateSchema } from "@/lib/tutors/schemas";
 import { idSchema } from "@/lib/master-data/schemas";
 import { listCalendarDays, listSessionSlots } from "@/server/master-data/queries";
 import { getMyTutorProfile } from "./queries";
@@ -134,4 +135,124 @@ export async function saveMyAvailabilityAction(
     revalidatePath(`/admin/availability/${mine.id}`);
   }
   return result;
+}
+
+// ---------------------------------------------------------------- tambah mentor & ganti email
+
+function authErrorMessage(message: string | undefined): string {
+  const m = (message ?? "").toLowerCase();
+  if (m.includes("already") || m.includes("registered") || m.includes("exists")) return "Email itu sudah terdaftar.";
+  if (m.includes("rate limit") || m.includes("too many")) return "Terlalu banyak permintaan email. Coba lagi beberapa menit lagi.";
+  if (m.includes("invalid") && m.includes("email")) return "Email tidak valid.";
+  return "Gagal menyimpan akun mentor. Coba lagi.";
+}
+
+/**
+ * Admin menambah mentor dari aplikasi: membuat akun login (Supabase Auth Admin API), menjadikannya
+ * mentor, lalu mengisi level, rate, dan status dapat-dijadwalkan. Bila langkah setelah pembuatan akun
+ * gagal, akun yang baru dibuat dihapus lagi supaya tidak tersisa akun setengah jadi.
+ */
+export async function addTutorAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireRole(["admin"]);
+  const parsed = tutorCreateSchema.safeParse(Object.fromEntries(formData.entries()));
+  if (!parsed.success) return fail(firstIssueMessage(parsed.error));
+  const v = parsed.data;
+
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch (e) {
+    console.error("[tutors:add] env", e);
+    return fail("Konfigurasi server belum lengkap (SUPABASE_SERVICE_ROLE_KEY). Hubungi pengembang.");
+  }
+
+  const meta = { full_name: v.fullName };
+  const created = v.sendInvite
+    ? await admin.auth.admin.inviteUserByEmail(v.email, { data: meta })
+    : await admin.auth.admin.createUser({ email: v.email, email_confirm: true, user_metadata: meta });
+  if (created.error || !created.data.user) {
+    console.error("[tutors:add] auth", created.error?.message);
+    return fail(authErrorMessage(created.error?.message));
+  }
+  const userId = created.data.user.id;
+
+  const rollback = async (why: string) => {
+    console.error("[tutors:add] rollback:", why);
+    const del = await admin.auth.admin.deleteUser(userId);
+    if (del.error) console.error("[tutors:add] rollback gagal:", del.error.message);
+  };
+
+  // Profile dibuat trigger; jadikan mentor aktif (memicu pembuatan baris tutor_profiles).
+  const { error: profErr } = await admin
+    .from("profiles")
+    .update({ full_name: v.fullName, role: "tutor", is_active: true })
+    .eq("id", userId);
+  if (profErr) {
+    await rollback(profErr.message);
+    return fail("Gagal menyiapkan profil mentor. Akun tidak dibuat; coba lagi.");
+  }
+  const { data: tp, error: tpErr } = await admin.from("tutor_profiles").select("id").eq("profile_id", userId).maybeSingle();
+  if (tpErr || !tp) {
+    await rollback(tpErr?.message ?? "tutor_profiles tidak ada");
+    return fail("Gagal menyiapkan data mentor. Akun tidak dibuat; coba lagi.");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_update_tutor", {
+    p_tutor_id: tp.id,
+    p_full_name: v.fullName,
+    p_account_active: true,
+    p_level: v.level,
+    p_rate: v.rate,
+    p_schedulable: v.schedulable,
+  });
+  if (error) {
+    await rollback(error.message);
+    return dbFailure(error, "tutor");
+  }
+
+  revalidatePath("/admin/mentor");
+  revalidatePath("/admin/kompetensi");
+  revalidatePath("/admin/availability");
+  return ok(
+    v.sendInvite
+      ? `Mentor ${v.fullName} ditambahkan. Email undangan dikirim ke ${v.email}.`
+      : `Mentor ${v.fullName} ditambahkan tanpa email undangan. Kirim "atur password" nanti lewat Ubah email.`,
+  );
+}
+
+/** Ganti email akun mentor, opsional kirim email atur-password ke alamat baru. */
+export async function updateTutorEmailAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireRole(["admin"]);
+  const parsed = tutorEmailSchema.safeParse(Object.fromEntries(formData.entries()));
+  if (!parsed.success) return fail(firstIssueMessage(parsed.error));
+  const v = parsed.data;
+
+  // tutorId = tutor_profiles.id; cari akun lewat client admin yang sudah dicek RLS.
+  const supabase = await createClient();
+  const { data: tp, error: tpErr } = await supabase.from("tutor_profiles").select("profile_id").eq("id", v.tutorId).maybeSingle();
+  if (tpErr || !tp) return fail("Mentor tidak ditemukan.");
+
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch (e) {
+    console.error("[tutors:email] env", e);
+    return fail("Konfigurasi server belum lengkap (SUPABASE_SERVICE_ROLE_KEY). Hubungi pengembang.");
+  }
+  const { error } = await admin.auth.admin.updateUserById(tp.profile_id, { email: v.email, email_confirm: true });
+  if (error) {
+    console.error("[tutors:email] auth", error.message);
+    return fail(authErrorMessage(error.message));
+  }
+  if (v.sendReset) {
+    const { error: resetErr } = await admin.auth.resetPasswordForEmail(v.email);
+    if (resetErr) {
+      console.error("[tutors:email] reset", resetErr.message);
+      revalidatePath("/admin/mentor");
+      return fail("Email diganti, tetapi email atur-password gagal dikirim. Coba kirim lagi.");
+    }
+  }
+  revalidatePath("/admin/mentor");
+  return ok(v.sendReset ? "Email diganti dan email atur-password dikirim." : "Email diganti.");
 }

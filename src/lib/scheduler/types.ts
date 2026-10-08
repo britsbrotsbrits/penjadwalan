@@ -101,6 +101,11 @@ export type SchedulerInput = {
   requirements: readonly Requirement[];
   /** Seed acak; hasil harus sama untuk input dan seed yang sama. */
   seed: number;
+  /**
+   * Sesi yang sudah ada (pola mingguan) dan tidak boleh disentuh: hanya mengisi hunian (Generate Additional).
+   * Tidak pernah dipindahkan oleh repair dan tidak muncul di hasil.
+   */
+  frozen?: readonly ScheduledSession[];
 };
 
 export type SchedulerFn = (input: SchedulerInput) => SchedulerResult;

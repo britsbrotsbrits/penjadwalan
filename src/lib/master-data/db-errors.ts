@@ -182,6 +182,15 @@ export function mapDbError(error: DbErrorLike, entity: MasterEntity): string {
   if (notEditable) {
     return `Jadwal berstatus ${STATUS_LABEL[notEditable[1]!] ?? notEditable[1]} tidak dapat diubah.`;
   }
+  const bad = /SCHED_BAD_TRANSITION:([A-Z]+):([A-Z]+)/.exec(text);
+  if (bad) {
+    return `Status ${STATUS_LABEL[bad[1]!] ?? bad[1]} tidak bisa langsung menjadi ${STATUS_LABEL[bad[2]!] ?? bad[2]}.`;
+  }
+  if (text.includes("SCHED_APPROVE_EMPTY")) return "Periode belum punya sesi terjadwal, jadi belum bisa disetujui.";
+  const approveViol = /SCHED_APPROVE_VIOLATIONS:(\d+)/.exec(text);
+  if (approveViol) return `Jadwal masih punya ${approveViol[1]} pelanggaran aturan dan belum bisa disetujui. Perbaiki dulu.`;
+  const addNo = /SCHED_ADDITIONAL_NOT_ALLOWED:([A-Z]+)/.exec(text);
+  if (addNo) return `Generate Additional hanya untuk periode Generated atau Approved (status sekarang: ${STATUS_LABEL[addNo[1]!] ?? addNo[1]}).`;
   if (text.includes("SCHED_SESSIONS_OUTSIDE_RANGE")) {
     return "Masih ada sesi di luar rentang tanggal yang baru. Batalkan atau pindahkan sesi itu dulu.";
   }

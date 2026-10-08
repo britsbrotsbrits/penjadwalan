@@ -23,10 +23,10 @@ export type WeeklyIssue = {
   complete: boolean;
 };
 
-type Slot = { label: string; allowed: Set<string> };
+export type Slot = { label: string; allowed: Set<string> };
 
 /** Pencocokan bipartit maksimum: unit sesi sisa (subtes) ke slot fleksibel. Mengembalikan jumlah cocok. */
-function matchFlex(units: string[], slots: Slot[]): { matchedSlot: boolean[]; matchedUnit: boolean[] } {
+export function matchFlex(units: string[], slots: Slot[]): { matchedSlot: boolean[]; matchedUnit: boolean[] } {
   const slotOfUnit: number[] = new Array(slots.length).fill(-1); // slot -> unit
   const matchedUnit: boolean[] = new Array(units.length).fill(false);
 

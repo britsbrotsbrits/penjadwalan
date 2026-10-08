@@ -126,7 +126,13 @@ Tidak ada SQL di fase ini. Engine murni (tanpa database) di `src/lib/scheduler`,
 - **Generate Jadwal (DEC-06, sinkron):** snapshot dari data nyata (`scheduler/snapshot.ts`) -> scheduler membuat pola mingguan -> `schedule/plan.ts` memperluasnya ke tanggal periode (dibatasi tanggal mulai/selesai rombel) -> `save_generated_schedule` menyimpan atomik dan **mengganti semua sesi periode itu**. Libur/tanggal merah belum dimodelkan.
 - **Validasi:** `_schedule_violations()` di database (kapasitas, kompetensi, availability, ruangan tetap, data nonaktif, hari/sesi aktif, di luar periode) dipakai oleh generate, edit manual, dan laporan; `validation/weekly-distribution.ts` memeriksa distribusi subtes per minggu (kekurangan hanya pada minggu penuh). Indeks unik mencegah mentor/ruangan/rombel dobel.
 - **Edit manual:** tambah, ubah (tanggal, sesi, subtes, mentor, ruangan), dan batalkan sesi; pelanggaran ditolak dengan alasan. Belum ada mekanisme override (butuh audit log, Phase 17).
-- **Status:** hanya DRAFT dan GENERATED yang bisa diedit/digenerate ulang; APPROVED/LOCKED/CANCELLED dilindungi. Transisi status lainnya = Phase 11.
+- **Status:** hanya DRAFT dan GENERATED yang bisa diedit/digenerate ulang; APPROVED/LOCKED/CANCELLED dilindungi.
+
+## Alur status dan Generate Additional (Phase 11)
+
+- **Alur status** (`set_period_status`, admin saja; tabel yang sama di `validation/transitions.ts` untuk tombol UI): GENERATED -> APPROVED, APPROVED -> GENERATED (tarik persetujuan), APPROVED -> LOCKED, dan DRAFT/GENERATED/APPROVED -> CANCELLED. LOCKED dan CANCELLED final. Approve butuh minimal satu sesi dan nol pelanggaran (kebutuhan yang belum terjadwal tidak menghalangi). Cancel membatalkan semua sesi periode sehingga tanggal dan slotnya bebas dipakai periode lain. Lock dan Cancel butuh centang konfirmasi di UI.
+- **Generate Additional** (`save_additional_schedule`, `schedule/additional.ts`): hanya pada GENERATED/APPROVED. Sesi yang ada dijadikan pola mingguan dan dibekukan (`SchedulerInput.frozen`: hanya mengisi hunian, tidak pernah dipindahkan); kebutuhan dikurangi sesi yang ada; hanya sisanya dijadwalkan. Sesi lama tidak pernah diubah atau dihapus, status periode tidak berubah, sesi baru bertanda `ADDITIONAL`. Hanya sesi baru yang divalidasi (pelanggaran lama tidak menghalangi). Pola dipakai konservatif: sel hari/sesi yang dipakai sesi lama pada tanggal mana pun dianggap terisi.
+- **Belum ada:** audit log perubahan status dan override (Phase 17).
 
 ## Tes RLS
 
@@ -140,6 +146,7 @@ File di `supabase/tests/`:
 | `tutors_rls.test.sql` | 16 kelompok kasus Phase 5: anon, tutor A/B, tutor nonaktif, admin; isolasi rate, eskalasi, fungsi availability/kompetensi/update tutor, constraint, cascade |
 | `fixed_room.test.sql` | 7 kelompok kasus Phase 6: ruangan tetap harus aktif, ganti/kosongkan, berbagi ruangan, kapasitas tidak dipaksa, ruangan dinonaktifkan, tanpa DELETE, tutor/anon |
 | `academic_config.test.sql` | 11 kelompok kasus Phase 7: nilai per level, upsert, validasi nilai/scope/hari, clear, distribusi (item fleksibel, penggantian atomik, input buruk), tanpa tulis langsung, tutor/anon |
+| `schedule_status.test.sql` | 9 kelompok kasus Phase 11: 25 pasangan transisi status, syarat approve, proteksi APPROVED/LOCKED, cancel membebaskan slot, Generate Additional (hanya menambah, sesi lama utuh, atomik, validasi hanya sesi baru), hak akses |
 | `schedule.test.sql` | 11 kelompok kasus Phase 10: periode (unik, urutan, panjang, tumpang tindih), sesi manual (semua aturan), dobel, ubah/batalkan, proteksi status, generate atomik, laporan validasi, ubah periode, hak akses |
 
 Jalankan seluruh isi file di SQL Editor pada project **dev/scratch** atau lewat `psql`. Semua perubahan di-rollback, dan tes tidak bergantung pada isi database (akun dan data yang sudah ada tidak mengganggu). Hasil yang benar: tidak ada error merah. Di `psql` terlihat NOTICE `PASS ...` per kasus dan `SEMUA TES LULUS` di akhir; SQL Editor Supabase mungkin tidak menampilkan NOTICE, jadi ketiadaan error sudah berarti lulus. Jika ada kasus yang gagal, pesan error menyebut kasusnya. Tes ini wajib dijalankan ulang setiap ada perubahan policy atau tabel baru.

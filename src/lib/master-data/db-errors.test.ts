@@ -218,4 +218,13 @@ describe("mapDbError: jadwal bertanggal (Phase 10)", () => {
       "Terjadi kesalahan saat menyimpan data. Coba lagi.",
     );
   });
+
+  it("memetakan token alur status dan Generate Additional (Phase 11)", () => {
+    expect(mapDbError({ code: "55000", message: "SCHED_BAD_TRANSITION:LOCKED:GENERATED" }, "periode jadwal")).toBe(
+      "Status Locked tidak bisa langsung menjadi Generated.",
+    );
+    expect(mapDbError({ code: "P0001", message: "SCHED_APPROVE_EMPTY" }, "periode jadwal")).toContain("belum punya sesi");
+    expect(mapDbError({ code: "P0001", message: "SCHED_APPROVE_VIOLATIONS:3" }, "periode jadwal")).toContain("3 pelanggaran");
+    expect(mapDbError({ code: "55000", message: "SCHED_ADDITIONAL_NOT_ALLOWED:LOCKED" }, "periode jadwal")).toContain("status sekarang: Locked");
+  });
 });

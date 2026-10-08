@@ -11,17 +11,21 @@ import { expandRequirements } from "@/lib/scheduler/requirements";
 import {
   isEditableStatus,
   PERIOD_STATUS_LABEL,
+  TRANSITION_ACTION,
   PERIOD_STATUS_TONE,
   reasonLabel,
 } from "@/lib/schedule/labels";
 import type { TeachingSession } from "@/lib/schedule/schemas";
+import { allowedTransitions, canGenerateAdditional, needsConfirmation } from "@/lib/validation/transitions";
 import { addDays, diffDays, isoDow, weekStart } from "@/lib/validation/dates";
 import { VIOLATION_LABELS, type ViolationCode } from "@/lib/validation/violations";
 import { checkWeeklyDistribution } from "@/lib/validation/weekly-distribution";
 import {
   cancelSessionAction,
   createSessionAction,
+  generateAdditionalAction,
   generateScheduleAction,
+  setPeriodStatusAction,
   updatePeriodAction,
   updateSessionAction,
 } from "@/server/schedule/actions";
@@ -237,6 +241,49 @@ export default async function SchedulePeriodPage({
           </p>
         </Card>
       )}
+
+      {canGenerateAdditional(period.status) ? (
+        <Card title="Generate Additional">
+          <p className="mb-3 max-w-3xl text-sm text-muted">
+            Melengkapi kebutuhan yang masih kurang <strong>tanpa mengubah atau menghapus sesi yang sudah ada</strong> (juga pada
+            periode Approved). Sesi yang ada dianggap terisi, jadi sesi baru tidak akan bentrok dengannya. Sesi baru diberi tanda
+            &quot;Tambahan&quot;.
+          </p>
+          <ActionForm action={generateAdditionalAction} submitLabel="Generate Additional" className="flex flex-col gap-3">
+            <input type="hidden" name="periodId" value={period.id} />
+            <label className="flex w-56 flex-col gap-1 text-sm">
+              Seed (opsional)
+              <input name="seed" inputMode="numeric" placeholder="kosong = acak" className={inputClass} />
+            </label>
+          </ActionForm>
+        </Card>
+      ) : null}
+
+      {allowedTransitions(period.status).length > 0 ? (
+        <Card title="Status periode">
+          <p className="mb-3 max-w-3xl text-sm text-muted">
+            Alur: Draft, Generated, Approved, Locked. Approved dan Locked melindungi sesi dari perubahan dan Generate ulang.
+            Lock dan Cancel tidak bisa dibatalkan.
+          </p>
+          <div className="flex flex-col gap-4">
+            {allowedTransitions(period.status).map((to) => (
+              <div key={to} className="border-t border-line pt-3 first:border-t-0 first:pt-0">
+                <ActionForm action={setPeriodStatusAction} submitLabel={TRANSITION_ACTION[to]?.label ?? to} className="flex flex-col gap-2">
+                  <input type="hidden" name="periodId" value={period.id} />
+                  <input type="hidden" name="to" value={to} />
+                  <p className="text-sm text-muted">{TRANSITION_ACTION[to]?.hint}</p>
+                  {needsConfirmation(to) ? (
+                    <label className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" name="confirm" className="h-4 w-4 accent-primary" />
+                      Ya, saya mengerti ini tidak bisa dibatalkan
+                    </label>
+                  ) : null}
+                </ActionForm>
+              </div>
+            ))}
+          </div>
+        </Card>
+      ) : null}
 
       {run && runIssues.length > 0 ? (
         <Card title="Catatan data pada generate terakhir">
@@ -534,6 +581,7 @@ function SessionRow({ s, editable, codes, names, options }: RowProps) {
         <span>{names.room}</span>
         <span className="flex items-center gap-2">
           {s.source === "MANUAL" ? <Badge tone="primary">Manual</Badge> : null}
+          {s.source === "ADDITIONAL" ? <Badge tone="success">Tambahan</Badge> : null}
           {codes.length > 0 ? <Badge tone="danger">Pelanggaran</Badge> : null}
         </span>
       </div>

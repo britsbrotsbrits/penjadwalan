@@ -43,6 +43,25 @@ export const generateSchema = z.object({
   confirmReplace: z.preprocess((v) => v === "on" || v === "true" || v === true, z.boolean()),
 });
 
+export const generateAdditionalSchema = z.object({
+  periodId: z.string().uuid("ID tidak valid."),
+  seed: generateSchema.shape.seed,
+});
+
+const checkbox = z.preprocess((v) => v === "on" || v === "true" || v === true, z.boolean());
+
+export const statusChangeSchema = z
+  .object({
+    periodId: z.string().uuid("ID tidak valid."),
+    to: z.enum(["APPROVED", "GENERATED", "LOCKED", "CANCELLED"], { errorMap: () => ({ message: "Status tujuan tidak valid." }) }),
+    confirm: checkbox,
+  })
+  .superRefine((v, ctx) => {
+    if ((v.to === "LOCKED" || v.to === "CANCELLED") && !v.confirm) {
+      ctx.addIssue({ code: "custom", path: ["confirm"], message: "Centang konfirmasi: perpindahan ini tidak bisa dibatalkan." });
+    }
+  });
+
 const sessionFields = {
   sessionDate: isoDate("Tanggal"),
   slotNo: z.coerce.number({ invalid_type_error: "Sesi tidak valid." }).int("Sesi tidak valid.").min(1, "Sesi tidak valid.").max(99, "Sesi tidak valid."),
@@ -81,7 +100,7 @@ export const sessionRowSchema = z
     subtest_id: z.string().uuid(),
     tutor_id: z.string().uuid(),
     room_id: z.string().uuid(),
-    source: z.enum(["GENERATED", "MANUAL"]),
+    source: z.enum(["GENERATED", "MANUAL", "ADDITIONAL"]),
   })
   .transform((r) => ({
     id: r.id,

@@ -1,8 +1,9 @@
 import type { UnscheduledReason } from "../scheduler/types";
+import type { PeriodStatus } from "../validation/transitions";
+
+export type { PeriodStatus };
 
 /** Label status periode dan alasan belum terjadwal untuk admin. Murni. */
-
-export type PeriodStatus = "DRAFT" | "GENERATED" | "APPROVED" | "LOCKED" | "CANCELLED";
 
 export const PERIOD_STATUS_LABEL: Readonly<Record<PeriodStatus, string>> = {
   DRAFT: "Draft",
@@ -40,3 +41,17 @@ export const UNSCHEDULED_REASON_LABEL: Readonly<Record<UnscheduledReason, string
 export function reasonLabel(code: string): string {
   return (UNSCHEDULED_REASON_LABEL as Record<string, string>)[code] ?? code;
 }
+
+/** Teks tombol dan penjelasan untuk tiap perpindahan status. */
+export const TRANSITION_ACTION: Readonly<Record<string, { label: string; hint: string }>> = {
+  APPROVED: { label: "Setujui jadwal", hint: "Sesi dilindungi dari perubahan dan Generate ulang. Butuh minimal satu sesi dan nol pelanggaran." },
+  GENERATED: { label: "Tarik persetujuan", hint: "Kembali ke Generated supaya jadwal bisa diedit atau digenerate ulang." },
+  LOCKED: { label: "Kunci periode", hint: "Final dan tidak bisa dibuka lagi. Dipakai sebagai dasar absensi dan payroll." },
+  CANCELLED: { label: "Batalkan periode", hint: "Semua sesi dibatalkan, tanggal dan slotnya bebas dipakai periode lain. Tidak bisa dibuka lagi." },
+};
+
+export const SESSION_SOURCE_LABEL: Readonly<Record<string, string>> = {
+  GENERATED: "Generate",
+  MANUAL: "Manual",
+  ADDITIONAL: "Tambahan",
+};

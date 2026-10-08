@@ -7,7 +7,9 @@ import { mapDbError, type DbErrorLike, type MasterEntity } from "@/lib/master-da
 import { fail, ok, type FormState } from "@/lib/master-data/form-state";
 import { firstIssueMessage } from "@/lib/master-data/schemas";
 import {
+  generateAdditionalSchema,
   generateSchema,
+  statusChangeSchema,
   periodCreateSchema,
   periodUpdateSchema,
   sessionCancelSchema,
@@ -15,6 +17,8 @@ import {
   sessionUpdateSchema,
 } from "@/lib/schedule/schemas";
 import { planSchedule } from "@/lib/schedule/plan";
+import { planAdditional } from "@/lib/schedule/additional";
+import { canGenerateAdditional } from "@/lib/validation/transitions";
 import { getPeriod, listPeriodSessions, loadSchedulingSnapshot } from "./queries";
 
 // Setiap mutasi: requireRole -> Zod -> RPC (admin dan aturan jadwal dicek lagi di database) -> mapDbError.
@@ -222,4 +226,105 @@ export async function cancelSessionAction(_prev: FormState, formData: FormData):
   if (error) return dbFailure(error, "jadwal");
   revalidatePath("/admin/jadwal/[id]", "page");
   return ok("Sesi dibatalkan.");
+}
+
+/**
+ * Ubah status periode (Approve, tarik persetujuan, Lock, Cancel). Aturan sebenarnya ditegakkan database
+ * (set_period_status); Lock dan Cancel tidak bisa dibatalkan sehingga butuh konfirmasi. TODO Phase 17: audit log.
+ */
+export async function setPeriodStatusAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireRole(["admin"]);
+  const parsed = statusChangeSchema.safeParse({
+    periodId: text(formData, "periodId"),
+    to: text(formData, "to"),
+    confirm: formData.get("confirm") ?? false,
+  });
+  if (!parsed.success) return fail(firstIssueMessage(parsed.error));
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_period_status", { p_id: parsed.data.periodId, p_to: parsed.data.to });
+  if (error) return dbFailure(error, "periode jadwal");
+  refresh(parsed.data.periodId);
+  return ok("Status periode diperbarui.");
+}
+
+/**
+ * Generate Additional: melengkapi kebutuhan yang belum terpenuhi TANPA mengubah sesi yang sudah ada.
+ * Hanya untuk periode Generated atau Approved. Bila tidak ada kebutuhan tersisa, tidak ada yang disimpan.
+ */
+export async function generateAdditionalAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireRole(["admin"]);
+  const parsed = generateAdditionalSchema.safeParse({ periodId: text(formData, "periodId"), seed: text(formData, "seed") });
+  if (!parsed.success) return fail(firstIssueMessage(parsed.error));
+  const { periodId } = parsed.data;
+
+  const period = await getPeriod(periodId);
+  if (!period) return fail("Periode jadwal tidak ditemukan.");
+  if (!canGenerateAdditional(period.status)) {
+    return fail(`Generate Additional hanya untuk periode Generated atau Approved (status sekarang: ${period.status}).`);
+  }
+
+  const existing = await listPeriodSessions(periodId);
+  const seed = parsed.data.seed ?? Math.floor(Math.random() * 4294967296);
+
+  let built;
+  try {
+    built = await loadSchedulingSnapshot();
+  } catch (e) {
+    console.error("[schedule:snapshot]", e);
+    return fail("Gagal memuat data untuk penjadwalan. Coba lagi.");
+  }
+
+  const plan = planAdditional({
+    snapshot: built.snapshot,
+    existing: existing.map((x) => ({
+      sessionDate: x.sessionDate,
+      slotNo: x.slotNo,
+      rombelId: x.rombelId,
+      subtestId: x.subtestId,
+      tutorId: x.tutorId,
+      roomId: x.roomId,
+    })),
+    seed,
+    periodStart: period.startDate,
+    periodEnd: period.endDate,
+    windows: built.rombelWindows,
+  });
+
+  if (plan.summary.weeklyRequired === 0) {
+    return fail("Tidak ada kebutuhan sesi (distribusi subtes belum diatur), jadi tidak ada yang bisa ditambahkan.");
+  }
+  if (plan.sessions.length === 0 && plan.unscheduled.length === 0) {
+    return fail("Tidak ada kebutuhan yang kurang: semua kebutuhan per minggu sudah terpenuhi oleh sesi yang ada.");
+  }
+  if (plan.sessions.length === 0) {
+    return fail(
+      `Tidak ada sesi tambahan yang bisa dijadwalkan (${plan.summary.weeklyUnscheduled} sesi per minggu masih belum terpenuhi). Periksa alasan di daftar kebutuhan belum terjadwal, atau perbaiki data (mentor, availability, ruangan).`,
+    );
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("save_additional_schedule", {
+    p_period_id: periodId,
+    p_seed: seed,
+    p_summary: { ...plan.summary, configIssues: built.issues },
+    p_sessions: plan.sessions.map((x) => ({
+      session_date: x.sessionDate,
+      slot_no: x.slotNo,
+      rombel_id: x.rombelId,
+      subtest_id: x.subtestId,
+      tutor_id: x.tutorId,
+      room_id: x.roomId,
+    })),
+    p_unscheduled: plan.unscheduled,
+  });
+  if (error) return dbFailure(error, "jadwal");
+
+  refresh(periodId);
+  const s = plan.summary;
+  return ok(
+    `Sesi tambahan dibuat: ${s.datedSessions} pertemuan (${s.weeklyScheduled} per minggu). ` +
+      (s.weeklyUnscheduled > 0 ? `${s.weeklyUnscheduled} sesi per minggu masih belum terpenuhi. ` : "Semua kebutuhan kini terpenuhi. ") +
+      `Sesi yang sudah ada tidak diubah. Seed ${seed}.`,
+  );
 }

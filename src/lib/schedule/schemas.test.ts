@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { generateSchema, periodCreateSchema, sessionCreateSchema, sessionUpdateSchema } from "./schemas";
+import { generateAdditionalSchema, generateSchema, statusChangeSchema, periodCreateSchema, sessionCreateSchema, sessionUpdateSchema } from "./schemas";
 
 const uuid = "11111111-1111-4111-8111-111111111111";
 
@@ -50,5 +50,19 @@ describe("skema sesi", () => {
     expect(sessionUpdateSchema.safeParse({ id: uuid, ...base, slotNo: "1.5" }).success).toBe(false);
     expect(sessionUpdateSchema.safeParse({ id: uuid, ...base, sessionDate: "2026-02-31" }).success).toBe(false);
     expect(sessionCreateSchema.safeParse({ periodId: uuid, ...base }).success).toBe(false);
+  });
+});
+
+describe("schema Phase 11", () => {
+  it("status: LOCKED dan CANCELLED wajib konfirmasi", () => {
+    expect(statusChangeSchema.safeParse({ periodId: uuid, to: "LOCKED", confirm: "" }).success).toBe(false);
+    expect(statusChangeSchema.safeParse({ periodId: uuid, to: "CANCELLED", confirm: "on" }).success).toBe(true);
+    expect(statusChangeSchema.safeParse({ periodId: uuid, to: "APPROVED", confirm: "" }).success).toBe(true);
+    expect(statusChangeSchema.safeParse({ periodId: uuid, to: "DRAFT", confirm: "on" }).success).toBe(false);
+    expect(statusChangeSchema.safeParse({ periodId: "x", to: "APPROVED", confirm: "" }).success).toBe(false);
+  });
+  it("additional: seed opsional dan dibatasi", () => {
+    expect(generateAdditionalSchema.safeParse({ periodId: uuid, seed: "" }).success).toBe(true);
+    expect(generateAdditionalSchema.safeParse({ periodId: uuid, seed: "-1" }).success).toBe(false);
   });
 });

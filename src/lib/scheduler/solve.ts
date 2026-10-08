@@ -12,8 +12,7 @@ import type { Requirement, ScheduledSession, SchedulerFn, SchedulerInput, Schedu
  *   3. buntu -> repair terbatas (pindahkan satu sesi penghalang ke sel lain), tidak pernah melanggar hard constraint
  *   4. sisa dilaporkan sebagai unscheduled dengan alasan terstruktur
  * Tidak pernah menjadwalkan sesi yang melanggar hard constraint; lebih baik tidak terjadwal dan dijelaskan.
- * Yang belum ada (fase berikutnya): jadwal beku/occupancy tetap untuk Generate Additional (Phase 11),
- * combined session (TBD-01), preferensi/permintaan tutor, bobot seniority (arti level belum didefinisikan).
+ * Sesi beku (`frozen`) dipakai Generate Additional (Phase 11). Yang belum ada (fase berikutnya): combined session (TBD-01), preferensi/permintaan tutor, bobot seniority (arti level belum didefinisikan).
  */
 
 export type SchedulerOptions = {
@@ -23,6 +22,9 @@ export type SchedulerOptions = {
 };
 
 export const DEFAULT_REPAIR_BUDGET = 10000;
+
+/** Penanda sesi beku: tidak ada di daftar kebutuhan, sehingga repair tidak pernah memindahkannya. */
+export const FROZEN_REQUIREMENT_ID = "__frozen__";
 
 function toSession(req: Requirement, c: Candidate): ScheduledSession {
   return {
@@ -60,10 +62,11 @@ export function createScheduler(options: SchedulerOptions = {}): SchedulerFn {
   const weights: SchedulerWeights = { ...DEFAULT_WEIGHTS, ...options.weights };
   const repairBudget = options.repairBudget ?? DEFAULT_REPAIR_BUDGET;
 
-  return ({ snapshot, requirements, seed }: SchedulerInput): SchedulerResult => {
+  return ({ snapshot, requirements, seed, frozen }: SchedulerInput): SchedulerResult => {
     const ctx = buildContext(snapshot, requirements);
     const state = new ScheduleState();
     const rng = new Rng(seed);
+    for (const f of frozen ?? []) state.add({ ...f, requirementId: FROZEN_REQUIREMENT_ID });
     let budget = repairBudget;
 
     const place = (req: Requirement, excludeCell?: string) => {
@@ -124,7 +127,7 @@ export function createScheduler(options: SchedulerOptions = {}): SchedulerFn {
       unscheduled.push({ requirementId: req.id, missing, reason: why.reason, detail: why.detail });
     }
 
-    const scheduled = [...state.sessions.values()].sort(
+    const scheduled = [...state.sessions.values()].filter((x) => x.requirementId !== FROZEN_REQUIREMENT_ID).sort(
       (a, b) => a.day - b.day || a.slotNo - b.slotNo || a.rombelId.localeCompare(b.rombelId) || a.requirementId.localeCompare(b.requirementId),
     );
     return { scheduled, unscheduled };

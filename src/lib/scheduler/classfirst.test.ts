@@ -333,3 +333,17 @@ describe("hari khusus rombel (kelas 2: Selasa, Rabu, Jumat)", () => {
     expect(result.unscheduled[0]!.reason).toBe("NO_ROMBEL_SLOT");
   });
 });
+
+describe("regresi: mentor penghalang dengan beberapa alternatif (sesi N tidak ada)", () => {
+  it("banyak rombel satu sesi dengan mentor terbatas: tidak melempar galat di semua seed", () => {
+    const dist = [item("PK", 2), item("PU", 2), item("PM", 1)];
+    const rombels = Array.from({ length: 8 }, (_, i) => rombel(`r${i}`, [4], dist));
+    for (let seed = 1; seed <= 60; seed++) {
+      const tutors = Array.from({ length: 9 }, (_, i) => {
+        const av = cells(DAYS, [4]).filter((_, k) => (k + i + seed) % 3 !== 0);
+        return tutor(`t${i}`, i % 2 ? ["pk", "pu"] : allComp, av);
+      });
+      expect(() => go(snap(rombels, tutors), seed)).not.toThrow();
+    }
+  });
+});

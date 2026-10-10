@@ -169,12 +169,13 @@ export function createScheduler(options: SchedulerOptions = {}): SchedulerFn {
         const alternatives = (ctx.tutorsBySubtest.get(blocker.subtestId) ?? [])
           .filter((t) => t.id !== tutorId && ctx.tutorCells.get(t.id)?.has(key) && !state.tutorAt.has(`${t.id}|${key}`))
           .sort((a, b) => a.id.localeCompare(b.id));
+        let currentId = blockerId; // id berubah setiap sesi dipasang ulang
         for (const alt of alternatives) {
-          state.remove(blockerId);
+          state.remove(currentId);
           const reassigned = state.add({ ...blocker, tutorId: alt.id });
           if (placeAt(u.req, key, false)) return true;
           state.remove(reassigned);
-          state.add(blocker);
+          currentId = state.add(blocker);
         }
       }
       return false;

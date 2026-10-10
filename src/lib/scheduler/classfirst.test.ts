@@ -6,7 +6,7 @@ import { searchPlacement, DEFAULT_WEIGHTS } from "./candidates";
 import { buildContext, ScheduleState } from "./state";
 import { createScheduler, scheduler } from "./solve";
 import { buildSnapshot, type SnapshotInput } from "./snapshot";
-import type { Requirement, SchedRombel, SchedTutor, SchedulingSnapshot } from "./types";
+import type { SchedRombel, SchedTutor, SchedulingSnapshot } from "./types";
 
 const DAYS = [1, 2, 3, 4, 5];
 const cells = (days: number[], slots: number[]) => days.flatMap((day) => slots.map((slotNo) => ({ day, slotNo })));

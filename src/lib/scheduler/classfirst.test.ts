@@ -347,3 +347,80 @@ describe("regresi: mentor penghalang dengan beberapa alternatif (sesi N tidak ad
     }
   });
 });
+
+describe("aturan lunak: tidak sehari, tidak kelas yang sama dua kali", () => {
+  const ex = (a: string, b: string) => [a.toLowerCase(), b.toLowerCase()] as const;
+  const EXCL = [ex("PPU", "KMM"), ex("PK", "PM"), ex("LBI", "PU")];
+  const dist = [item("PK"), item("PM"), item("PPU"), item("KMM"), item("LBI"), item("PU")];
+  const gy = (id: string) => rombel(id, [1, 3], dist, { pattern: { subtestSlots: [1, 3], drillingSlots: [2] }, sessionsPerDay: 2 });
+  const tutors = Array.from({ length: 12 }, (_, i) => tutor(`t${i}`, allComp));
+  const clashes = (sessions: readonly { rombelId: string; day: number; subtestId: string }[]) => {
+    const key = new Set(EXCL.flatMap(([a, b]) => [`${a}|${b}`, `${b}|${a}`]));
+    let n = 0;
+    for (const x of sessions) for (const y of sessions) if (x !== y && x.rombelId === y.rombelId && x.day === y.day && key.has(`${x.subtestId}|${y.subtestId}`)) n += 1;
+    return n / 2;
+  };
+
+  for (const seed of [1, 2, 3, 4, 5]) {
+    it(`seed ${seed}: pasangan terlarang tidak sehari dalam satu rombel bila bisa dihindari`, () => {
+      const s = snap([gy("a"), gy("b")], tutors, { sameDayExclusions: EXCL });
+      const { result, report } = go(s, seed);
+      expect(report.violations).toEqual([]);
+      expect(result.unscheduled).toEqual([]);
+      expect(clashes(result.scheduled)).toBe(0);
+    });
+  }
+
+  it("tanpa aturan terdapat pasangan sehari pada sebagian seed (aturan benar-benar bekerja)", () => {
+    let total = 0;
+    for (const seed of [1, 2, 3, 4, 5]) total += clashes(go(snap([gy("a"), gy("b")], tutors), seed).result.scheduled);
+    expect(total).toBeGreaterThan(0);
+  });
+
+  it("mentor tidak mengajar rombel yang sama dua kali sehari bila ada mentor lain yang bisa", () => {
+    for (const seed of [1, 2, 3]) {
+      const { result } = go(snap([gy("a"), gy("b")], tutors), seed);
+      const seen = new Map<string, number>();
+      for (const x of result.scheduled) seen.set(`${x.tutorId}|${x.rombelId}|${x.day}`, (seen.get(`${x.tutorId}|${x.rombelId}|${x.day}`) ?? 0) + 1);
+      expect([...seen.values()].filter((n) => n > 1)).toEqual([]);
+    }
+  });
+
+  it("aturan lunak: bila hanya satu mentor yang bisa, rombel tetap terjadwal penuh", () => {
+    const solo = [tutor("only", allComp)];
+    const { result } = go(snap([gy("a")], solo), 1);
+    expect(result.unscheduled).toEqual([]);
+    expect(result.scheduled).toHaveLength(6);
+  });
+});
+
+describe("mentor tidak mengajar rombel yang sama dua kali sehari (mutasi yang harus tertangkap)", () => {
+  const subs = ["pk", "pu", "pm", "ppu"];
+  const build = () => {
+    const rombels = ["a", "b"].map((id) =>
+      rombel(id, [1, 2], subs.map((c) => ({ subtestId: c, flexibleSubtestIds: [], label: null, sessionsPerWeek: 2 })), { sessionsPerDay: 2 }),
+    );
+    return (n: number) => snap(rombels, Array.from({ length: n }, (_, i) => ({ ...tutor(`t${i}`, subs), level: 99 - i * 10 })));
+  };
+  const dups = (weights: { sameClassDay: number }) => {
+    const make = build();
+    let total = 0;
+    for (const n of [2, 3, 4]) {
+      for (let seed = 1; seed <= 10; seed++) {
+        const s = make(n);
+        const { requirements } = expandRequirements(s.rombels, s.days);
+        const res = createScheduler({ weights })({ snapshot: s, requirements, seed });
+        const m = new Map<string, number>();
+        for (const x of res.scheduled) m.set(`${x.tutorId}|${x.rombelId}|${x.day}`, (m.get(`${x.tutorId}|${x.rombelId}|${x.day}`) ?? 0) + 1);
+        total += [...m.values()].filter((c) => c > 1).length;
+      }
+    }
+    return total;
+  };
+  it("dengan aturan: tidak ada mentor yang dobel di rombel yang sama pada hari yang sama", () => {
+    expect(dups({ sameClassDay: 5 })).toBe(0);
+  });
+  it("tanpa aturan: dobel terjadi (aturan benar-benar bekerja)", () => {
+    expect(dups({ sameClassDay: 0 })).toBeGreaterThan(0);
+  });
+});

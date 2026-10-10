@@ -27,6 +27,10 @@ export type SchedulerWeights = {
   subtestBalance: number;
   /** Penalti per jeda kosong yang bertambah pada jadwal harian mentor (jadwal berurutan). */
   gap: number;
+  /** Penalti bila mentor yang sama mengajar rombel yang sama lebih dari sekali pada hari itu (aturan lunak). */
+  sameClassDay: number;
+  /** Penalti per sesi rombel pada hari itu yang subtesnya berpasangan terlarang dengan subtes ini (aturan lunak). */
+  dayExclusion: number;
   /** Selisih skor yang masih dianggap setara; pemenang dipilih acak berseed di antaranya. */
   tieEpsilon: number;
 };
@@ -40,6 +44,8 @@ export const DEFAULT_WEIGHTS: SchedulerWeights = {
   compact: 0.02,
   subtestBalance: 1,
   gap: 2.5,
+  sameClassDay: 5,
+  dayExclusion: 6,
   tieEpsilon: 0.5,
 };
 
@@ -85,6 +91,16 @@ export function priorityTerm(ctx: SchedContext, w: SchedulerWeights, tutorId: st
   const q = ctx.tutorQuota.get(tutorId);
   if (!q || w.priority === 0) return w.load * n;
   return -w.priority * sessionValue(q, n, w.load);
+}
+
+/** Jumlah sesi rombel pada hari itu yang subtesnya berpasangan terlarang dengan `subtestId`. */
+export function exclusionClashes(ctx: SchedContext, state: ScheduleState, rombelId: string, day: number, subtestId: string): number {
+  if (ctx.exclusions.size === 0) return 0;
+  let n = 0;
+  for (const other of ctx.snapshot.subtests) {
+    if (ctx.exclusions.has(`${subtestId}|${other.id}`)) n += state.count(state.rombelDaySubtest, `${rombelId}|${day}|${other.id}`);
+  }
+  return n;
 }
 
 export function searchPlacement(
@@ -162,6 +178,8 @@ export function searchPlacement(
         priorityTerm(ctx, w, o.tutorId, state.count(state.tutorLoad, o.tutorId)) -
         w.generalist * o.competencies -
         w.gap * state.gapDeltaIfAdd(o.tutorId, cell.day, cell.slotNo) -
+        w.sameClassDay * state.count(state.tutorRombelDay, `${o.tutorId}|${rombel.id}|${cell.day}`) -
+        w.dayExclusion * exclusionClashes(ctx, state, rombel.id, cell.day, o.subtestId) -
         w.subtestBalance * state.count(state.rombelSubtest, `${rombel.id}|${o.subtestId}`);
       candidates.push({ day: cell.day, slotNo: cell.slotNo, tutorId: o.tutorId, subtestId: o.subtestId, roomId: room.id, score });
     }

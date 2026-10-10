@@ -251,7 +251,12 @@ export function createScheduler(options: SchedulerOptions = {}): SchedulerFn {
         for (const t of ctx.tutorsBySubtest.get(s0.subtestId) ?? []) {
           if (t.id === s0.tutorId || !ctx.tutorCells.get(t.id)?.has(key) || state.tutorAt.has(`${t.id}|${key}`)) continue;
           const delta = state.gapDeltaIfAdd(t.id, s0.day, s0.slotNo) - removeGain;
-          const net = -DEFAULT_WEIGHTS.gap * delta + (valueOf(t.id, state.count(state.tutorLoad, t.id)) - lostValue);
+          const sameOld = state.count(state.tutorRombelDay, `${s0.tutorId}|${s0.rombelId}|${s0.day}`) - 1;
+          const sameNew = state.count(state.tutorRombelDay, `${t.id}|${s0.rombelId}|${s0.day}`);
+          const net =
+            -DEFAULT_WEIGHTS.gap * delta +
+            DEFAULT_WEIGHTS.sameClassDay * (sameOld - sameNew) +
+            (valueOf(t.id, state.count(state.tutorLoad, t.id)) - lostValue);
           if (net > 1e-9 && (best === null || net > best.net + 1e-9 || (Math.abs(net - best.net) <= 1e-9 && t.id < best.tutorId))) {
             best = { tutorId: t.id, net };
           }

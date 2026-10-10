@@ -56,6 +56,10 @@ export const patternRowSchema = z
   })
   .transform((r): PatternItem => ({ scopeType: r.scope_type, scopeId: r.scope_id, slotNo: r.slot_no, kind: r.kind }));
 
+export const exclusionRowSchema = z
+  .object({ subtest_a: z.string().uuid(), subtest_b: z.string().uuid() })
+  .transform((r) => ({ subtestA: r.subtest_a, subtestB: r.subtest_b }));
+
 // ---------------------------------------------------------------- form konfigurasi per scope
 
 /** Isian angka opsional: kosong = null (artinya "ikut parent": nilai di scope ini dihapus). */

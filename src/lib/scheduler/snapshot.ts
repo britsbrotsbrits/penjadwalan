@@ -39,6 +39,8 @@ export type SnapshotInput = {
   distribution: readonly DistributionItem[];
   /** Pola sesi harian (Phase 14); kosong = semua rombel dijadwalkan dengan cara lama. */
   patterns?: readonly PatternItem[];
+  /** Pasangan subtes yang sebaiknya tidak sehari dalam satu rombel (aturan lunak). */
+  exclusions?: ReadonlyArray<{ subtestA: string; subtestB: string }>;
 };
 
 export type SnapshotIssue = { code: "CONFIG_INVALID" | "CONFIG_MISSING"; rombelId: string; message: string };
@@ -148,6 +150,9 @@ export function buildSnapshot(input: SnapshotInput): BuiltSnapshot {
       rooms,
       rombels,
       tutors,
+      sameDayExclusions: (input.exclusions ?? [])
+        .filter((e) => subtestIds.has(e.subtestA) && subtestIds.has(e.subtestB) && e.subtestA !== e.subtestB)
+        .map((e) => [e.subtestA, e.subtestB] as const),
     },
     issues,
   };

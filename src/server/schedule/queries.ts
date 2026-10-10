@@ -15,7 +15,7 @@ import type { RombelWindow } from "@/lib/validation/expand";
 import { buildSnapshot, type BuiltSnapshot } from "@/lib/scheduler/snapshot";
 import type { ViolationCode } from "@/lib/validation/violations";
 import { isViolationCode } from "@/lib/validation/violations";
-import { listSettings, listDistributionItems, listSessionPatterns } from "@/server/config/queries";
+import { listSettings, listDistributionItems, listSessionPatterns, listSubtestExclusions } from "@/server/config/queries";
 import { listCalendarDays, listRooms, listSessionSlots, listSubtests } from "@/server/master-data/queries";
 import { listClassTypes, listPrograms, listRombelCounts, listRombels } from "@/server/academic/queries";
 import { listAvailability, listCompetencies, listTutorAccounts, listTutorProfiles } from "@/server/tutors/queries";
@@ -129,7 +129,7 @@ export async function loadScheduleLookups() {
 
 /** Snapshot nyata untuk scheduler (data aktif saat ini), beserta isu konfigurasi. */
 export async function loadSchedulingSnapshot(): Promise<BuiltSnapshot & { rombelWindows: Map<string, RombelWindow> }> {
-  const [days, slots, subtests, rooms, programs, classTypes, rombels, counts, tutorProfiles, tutorAccounts, competencies, availability, settings, distribution, patterns] =
+  const [days, slots, subtests, rooms, programs, classTypes, rombels, counts, tutorProfiles, tutorAccounts, competencies, availability, settings, distribution, patterns, exclusions] =
     await Promise.all([
       listCalendarDays(),
       listSessionSlots(),
@@ -146,6 +146,7 @@ export async function loadSchedulingSnapshot(): Promise<BuiltSnapshot & { rombel
       listSettings(),
       listDistributionItems(),
       listSessionPatterns(),
+      listSubtestExclusions(),
     ]);
   const accountName = new Map(tutorAccounts.map((a) => [a.id, a.fullName]));
 
@@ -169,6 +170,7 @@ export async function loadSchedulingSnapshot(): Promise<BuiltSnapshot & { rombel
     settings,
     distribution,
     patterns,
+    exclusions,
   });
   const rombelWindows = new Map(rombels.map((r) => [r.id, { start: r.startDate, end: r.endDate, cycleWeeks: r.cycleWeeks, cycleAnchor: r.cycleAnchor }]));
   return { ...built, rombelWindows };

@@ -59,6 +59,8 @@ export type SchedulingSnapshot = {
   rooms: readonly SchedRoom[];
   rombels: readonly SchedRombel[];
   tutors: readonly SchedTutor[];
+  /** Pasangan subtes yang sebaiknya tidak sehari dalam satu rombel (aturan lunak). */
+  sameDayExclusions?: ReadonlyArray<readonly [string, string]>;
 };
 
 /** Kebutuhan sesi per minggu untuk satu rombel dan satu item distribusi. */

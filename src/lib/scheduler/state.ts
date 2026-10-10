@@ -28,6 +28,8 @@ export type SchedContext = {
   slotIndex: Map<number, number>;
   /** Jatah dasar dan kuota sesi per minggu tiap mentor (dari level dan jumlah centang). */
   tutorQuota: Map<string, TutorQuota>;
+  /** Pasangan subtes yang sebaiknya tidak sehari dalam satu rombel; kunci `a|b` untuk kedua urutan. */
+  exclusions: Set<string>;
 };
 
 export function buildContext(snapshot: SchedulingSnapshot, requirements: readonly Requirement[]): SchedContext {
@@ -72,6 +74,7 @@ export function buildContext(snapshot: SchedulingSnapshot, requirements: readonl
     allowedCells,
     slotIndex,
     tutorQuota,
+    exclusions: new Set((snapshot.sameDayExclusions ?? []).flatMap(([a, b]) => [`${a}|${b}`, `${b}|${a}`])),
     reqById: new Map(requirements.map((r) => [r.id, r])),
     rombelById: new Map(snapshot.rombels.map((r) => [r.id, r])),
     tutorById: new Map(snapshot.tutors.map((t) => [t.id, t])),
@@ -93,6 +96,10 @@ export class ScheduleState {
   tutorLoad = new Map<string, number>();
   rombelSubtest = new Map<string, number>();
   perRequirement = new Map<string, number>();
+  /** Jumlah sesi per rombel, hari, dan subtes (kunci rombel|hari|subtes). */
+  rombelDaySubtest = new Map<string, number>();
+  /** Jumlah sesi satu mentor pada satu rombel di satu hari (kunci mentor|rombel|hari). */
+  tutorRombelDay = new Map<string, number>();
   byCell = new Map<string, Set<number>>();
   /** Posisi sesi (indeks grid) yang dipegang tiap mentor pada tiap hari, terurut. Kunci: tutorId|day. */
   tutorDay = new Map<string, number[]>();
@@ -113,6 +120,8 @@ export class ScheduleState {
     bump(this.tutorLoad, s.tutorId, 1);
     bump(this.rombelSubtest, `${s.rombelId}|${s.subtestId}`, 1);
     bump(this.perRequirement, s.requirementId, 1);
+    bump(this.rombelDaySubtest, `${s.rombelId}|${s.day}|${s.subtestId}`, 1);
+    bump(this.tutorRombelDay, `${s.tutorId}|${s.rombelId}|${s.day}`, 1);
     this.addTutorDay(s);
     const set = this.byCell.get(cell) ?? new Set<number>();
     set.add(id);
@@ -132,6 +141,8 @@ export class ScheduleState {
     bump(this.tutorLoad, s.tutorId, -1);
     bump(this.rombelSubtest, `${s.rombelId}|${s.subtestId}`, -1);
     bump(this.perRequirement, s.requirementId, -1);
+    bump(this.rombelDaySubtest, `${s.rombelId}|${s.day}|${s.subtestId}`, -1);
+    bump(this.tutorRombelDay, `${s.tutorId}|${s.rombelId}|${s.day}`, -1);
     this.removeTutorDay(s);
     this.byCell.get(cell)?.delete(id);
     return s;

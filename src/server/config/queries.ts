@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { fetchAll } from "@/server/fetch-all";
 import { createClient } from "@/lib/supabase/server";
-import { distributionRowSchema, patternRowSchema, settingRowSchema } from "@/lib/config/schemas";
+import { distributionRowSchema, patternRowSchema, exclusionRowSchema, settingRowSchema } from "@/lib/config/schemas";
 import type { DistributionItem } from "@/lib/config/distribution";
 import type { PatternItem } from "@/lib/config/pattern";
 import type { SettingRow } from "@/lib/config/resolver";
@@ -42,4 +42,12 @@ export async function listSessionPatterns(): Promise<PatternItem[]> {
       .range(from, to),
   );
   return z.array(patternRowSchema).parse(rows);
+}
+
+export async function listSubtestExclusions(): Promise<Array<{ subtestA: string; subtestB: string }>> {
+  const supabase = await createClient();
+  const rows = await fetchAll("pasangan subtes sehari", (from, to) =>
+    supabase.from("subtest_day_exclusions").select("subtest_a, subtest_b").order("subtest_a", { ascending: true }).range(from, to),
+  );
+  return z.array(exclusionRowSchema).parse(rows);
 }

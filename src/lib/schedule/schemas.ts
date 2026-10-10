@@ -101,6 +101,7 @@ export const sessionRowSchema = z
     tutor_id: z.string().uuid(),
     room_id: z.string().uuid(),
     source: z.enum(["GENERATED", "MANUAL", "ADDITIONAL"]),
+    display_label: z.string().nullable().optional().default(null),
   })
   .transform((r) => ({
     id: r.id,
@@ -112,6 +113,7 @@ export const sessionRowSchema = z
     tutorId: r.tutor_id,
     roomId: r.room_id,
     source: r.source,
+    displayLabel: r.display_label,
   }));
 export type TeachingSession = z.output<typeof sessionRowSchema>;
 

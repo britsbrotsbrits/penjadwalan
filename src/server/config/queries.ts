@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { fetchAll } from "@/server/fetch-all";
 import { createClient } from "@/lib/supabase/server";
-import { distributionRowSchema, settingRowSchema } from "@/lib/config/schemas";
+import { distributionRowSchema, patternRowSchema, settingRowSchema } from "@/lib/config/schemas";
 import type { DistributionItem } from "@/lib/config/distribution";
+import type { PatternItem } from "@/lib/config/pattern";
 import type { SettingRow } from "@/lib/config/resolver";
 
 // Hanya untuk kode server; RLS membatasi pembacaan ke admin (hasil kosong = bukan admin).
@@ -29,4 +30,16 @@ export async function listDistributionItems(): Promise<DistributionItem[]> {
       .range(from, to),
   );
   return z.array(distributionRowSchema).parse(rows);
+}
+
+export async function listSessionPatterns(): Promise<PatternItem[]> {
+  const supabase = await createClient();
+  const rows = await fetchAll("pola sesi", (from, to) =>
+    supabase
+      .from("session_pattern_items")
+      .select("scope_type, scope_id, slot_no, kind")
+      .order("id", { ascending: true })
+      .range(from, to),
+  );
+  return z.array(patternRowSchema).parse(rows);
 }

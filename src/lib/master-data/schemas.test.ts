@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   activeDaysSchema,
   dayRowSchema,
+  tryoutDaySchema,
   roomCreateSchema,
   roomRowSchema,
   slotCreateSchema,
@@ -171,11 +172,23 @@ describe("skema baris DB", () => {
   });
 
   it("dayRowSchema memetakan kolom", () => {
-    expect(dayRowSchema.parse({ day_of_week: 1, is_active: true })).toEqual({ dayOfWeek: 1, isActive: true });
+    expect(dayRowSchema.parse({ day_of_week: 1, is_active: true })).toEqual({ dayOfWeek: 1, isActive: true, isTryout: false });
+    expect(dayRowSchema.parse({ day_of_week: 6, is_active: false, is_tryout: true }).isTryout).toBe(true);
   });
 
   it("menolak baris dengan tipe kolom yang salah", () => {
     expect(roomRowSchema.safeParse({ id: ID, name: "A", capacity: "20", is_active: true }).success).toBe(false);
     expect(subtestRowSchema.safeParse({ id: "bukan-uuid", code: "PU", name: "x", sort_order: 1, is_active: true }).success).toBe(false);
+  });
+});
+
+describe("tryoutDaySchema", () => {
+  it("kosong = tidak ada; 1-7 diterima; selain itu ditolak", () => {
+    expect(tryoutDaySchema.parse({ day: "" }).day).toBeNull();
+    expect(tryoutDaySchema.parse({ day: "6" }).day).toBe(6);
+    expect(tryoutDaySchema.safeParse({ day: "0" }).success).toBe(false);
+    expect(tryoutDaySchema.safeParse({ day: "8" }).success).toBe(false);
+    expect(tryoutDaySchema.safeParse({ day: "66" }).success).toBe(false);
+    expect(tryoutDaySchema.safeParse({ day: "x" }).success).toBe(false);
   });
 });

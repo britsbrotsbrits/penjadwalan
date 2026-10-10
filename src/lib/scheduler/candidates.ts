@@ -22,6 +22,8 @@ export type SchedulerWeights = {
   compact: number;
   /** Penalti per sesi subtes yang sama pada rombel (seimbangkan item fleksibel). */
   subtestBalance: number;
+  /** Penalti per jeda kosong yang bertambah pada jadwal harian mentor (jadwal berurutan). */
+  gap: number;
   /** Selisih skor yang masih dianggap setara; pemenang dipilih acak berseed di antaranya. */
   tieEpsilon: number;
 };
@@ -33,6 +35,7 @@ export const DEFAULT_WEIGHTS: SchedulerWeights = {
   generalist: 0.3,
   compact: 0.02,
   subtestBalance: 1,
+  gap: 2.5,
   tieEpsilon: 0.5,
 };
 
@@ -99,8 +102,11 @@ export function searchPlacement(
   }
   tally.noRoomFits = roomPool.length === 0;
 
+  const allowedCells = ctx.allowedCells.get(rombel.id);
   const candidates: Candidate[] = [];
   for (const cell of ctx.cells) {
+    // Rombel berpola hanya boleh di sesi SUBTEST polanya (sesi tetap); rombel dengan hari khusus hanya di harinya.
+    if (allowedCells && !allowedCells.has(cell.key)) continue;
     if (opts.onlyCell !== undefined && cell.key !== opts.onlyCell) continue;
     if (opts.excludeCell !== undefined && cell.key === opts.excludeCell) continue;
     tally.cells += 1;
@@ -144,6 +150,7 @@ export function searchPlacement(
         base -
         w.load * state.count(state.tutorLoad, o.tutorId) -
         w.generalist * o.competencies -
+        w.gap * state.gapDeltaIfAdd(o.tutorId, cell.day, cell.slotNo) -
         w.subtestBalance * state.count(state.rombelSubtest, `${rombel.id}|${o.subtestId}`);
       candidates.push({ day: cell.day, slotNo: cell.slotNo, tutorId: o.tutorId, subtestId: o.subtestId, roomId: room.id, score });
     }

@@ -50,9 +50,9 @@ export default async function TutorSchedulePage({ searchParams }: { searchParams
     title: `Nama Mentor : ${name}`,
     subtitle: `Minggu ${weekRangeLabel(week)}`,
     weekStart: week,
-    days: days.filter((d) => d.isActive).map((d) => d.dayOfWeek),
+    days: days.filter((d) => d.isActive && !d.isTryout).map((d) => d.dayOfWeek),
     slots,
-    entries: sessions.map((s) => ({ date: s.sessionDate, slotNo: s.slotNo, lines: [s.subtestCode, s.rombelName, s.roomName] })),
+    entries: sessions.map((s) => ({ date: s.sessionDate, slotNo: s.slotNo, lines: [s.displayLabel ?? s.subtestCode, s.rombelName, s.roomName] })),
     availableCells: new Set(availability.filter((a) => a.available).map((a) => cellKey(a.day, a.slotNo))),
   });
   const size = gridSvgSize(grid);

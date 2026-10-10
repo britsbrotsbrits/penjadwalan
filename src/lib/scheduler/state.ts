@@ -19,6 +19,12 @@ export type SchedContext = {
   roomsByCapacity: SchedRoom[];
   roomById: Map<string, SchedRoom>;
   cells: Array<{ day: number; slotNo: number; key: string }>;
+  /** Sel yang boleh dipakai rombel berpola (hari reguler x sesi SUBTEST pola). Rombel tanpa pola tidak ada di sini. */
+  patternCells: Map<string, Set<string>>;
+  /** Pembatas sel per rombel: rombel berpola (hari x sesi pola) atau rombel dengan hari khusus (hari x semua sesi). */
+  allowedCells: Map<string, Set<string>>;
+  /** Posisi (indeks) tiap nomor sesi pada grid, untuk menghitung jeda mentor. */
+  slotIndex: Map<number, number>;
 };
 
 export function buildContext(snapshot: SchedulingSnapshot, requirements: readonly Requirement[]): SchedContext {
@@ -39,8 +45,27 @@ export function buildContext(snapshot: SchedulingSnapshot, requirements: readonl
   }
   const cells = snapshot.days.flatMap((day) => snapshot.slotNos.map((slotNo) => ({ day, slotNo, key: cellKey(day, slotNo) })));
   const roomsByCapacity = [...snapshot.rooms].sort((a, b) => a.capacity - b.capacity || a.id.localeCompare(b.id));
+  const slotIndex = new Map(snapshot.slotNos.map((n, i) => [n, i] as const));
+  const patternCells = new Map<string, Set<string>>();
+  const allowedCells = new Map<string, Set<string>>();
+  for (const r of snapshot.rombels) {
+    const days = r.days && r.days.length > 0 ? snapshot.days.filter((d) => r.days!.includes(d)) : snapshot.days;
+    if (r.pattern) {
+      const set = new Set<string>();
+      for (const day of days) for (const n of r.pattern.subtestSlots) if (gridSlots.has(n)) set.add(cellKey(day, n));
+      patternCells.set(r.id, set);
+      allowedCells.set(r.id, set);
+    } else if (r.days && r.days.length > 0) {
+      const set = new Set<string>();
+      for (const day of days) for (const n of snapshot.slotNos) set.add(cellKey(day, n));
+      allowedCells.set(r.id, set);
+    }
+  }
   return {
     snapshot,
+    patternCells,
+    allowedCells,
+    slotIndex,
     reqById: new Map(requirements.map((r) => [r.id, r])),
     rombelById: new Map(snapshot.rombels.map((r) => [r.id, r])),
     tutorById: new Map(snapshot.tutors.map((t) => [t.id, t])),
@@ -63,6 +88,13 @@ export class ScheduleState {
   rombelSubtest = new Map<string, number>();
   perRequirement = new Map<string, number>();
   byCell = new Map<string, Set<number>>();
+  /** Posisi sesi (indeks grid) yang dipegang tiap mentor pada tiap hari, terurut. Kunci: tutorId|day. */
+  tutorDay = new Map<string, number[]>();
+  private slotIndex = new Map<number, number>();
+
+  constructor(slotNos: readonly number[] = []) {
+    slotNos.forEach((n, i) => this.slotIndex.set(n, i));
+  }
 
   add(s: ScheduledSession): number {
     const id = this.nextId++;
@@ -75,6 +107,7 @@ export class ScheduleState {
     bump(this.tutorLoad, s.tutorId, 1);
     bump(this.rombelSubtest, `${s.rombelId}|${s.subtestId}`, 1);
     bump(this.perRequirement, s.requirementId, 1);
+    this.addTutorDay(s);
     const set = this.byCell.get(cell) ?? new Set<number>();
     set.add(id);
     this.byCell.set(cell, set);
@@ -93,13 +126,54 @@ export class ScheduleState {
     bump(this.tutorLoad, s.tutorId, -1);
     bump(this.rombelSubtest, `${s.rombelId}|${s.subtestId}`, -1);
     bump(this.perRequirement, s.requirementId, -1);
+    this.removeTutorDay(s);
     this.byCell.get(cell)?.delete(id);
     return s;
+  }
+
+  private pos(slotNo: number): number {
+    return this.slotIndex.get(slotNo) ?? slotNo;
+  }
+
+  private addTutorDay(s: ScheduledSession): void {
+    const key = `${s.tutorId}|${s.day}`;
+    const list = this.tutorDay.get(key) ?? [];
+    list.push(this.pos(s.slotNo));
+    list.sort((a, b) => a - b);
+    this.tutorDay.set(key, list);
+  }
+
+  private removeTutorDay(s: ScheduledSession): void {
+    const key = `${s.tutorId}|${s.day}`;
+    const list = this.tutorDay.get(key);
+    if (!list) return;
+    const i = list.indexOf(this.pos(s.slotNo));
+    if (i >= 0) list.splice(i, 1);
+    if (list.length === 0) this.tutorDay.delete(key);
+  }
+
+  /** Jumlah jeda kosong mentor pada hari itu = rentang pertama..terakhir dikurangi jumlah sesi. */
+  tutorGaps(tutorId: string, day: number): number {
+    return gapsOf(this.tutorDay.get(`${tutorId}|${day}`) ?? []);
+  }
+
+  /** Perubahan jumlah jeda bila mentor menambah satu sesi di posisi ini (negatif = menutup jeda). */
+  gapDeltaIfAdd(tutorId: string, day: number, slotNo: number): number {
+    const list = this.tutorDay.get(`${tutorId}|${day}`) ?? [];
+    if (list.length === 0) return 0;
+    const next = [...list, this.pos(slotNo)].sort((a, b) => a - b);
+    return gapsOf(next) - gapsOf(list);
   }
 
   count(map: Map<string, number>, key: string): number {
     return map.get(key) ?? 0;
   }
+}
+
+/** Jeda kosong pada daftar posisi terurut. */
+export function gapsOf(sorted: readonly number[]): number {
+  if (sorted.length < 2) return 0;
+  return sorted[sorted.length - 1]! - sorted[0]! + 1 - sorted.length;
 }
 
 function bump(map: Map<string, number>, key: string, delta: number): void {

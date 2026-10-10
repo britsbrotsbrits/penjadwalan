@@ -147,6 +147,7 @@ export async function generateScheduleAction(_prev: FormState, formData: FormDat
       subtest_id: s.subtestId,
       tutor_id: s.tutorId,
       room_id: s.roomId,
+      display_label: s.displayLabel ?? null,
     })),
     p_unscheduled: plan.unscheduled,
   });
@@ -315,6 +316,7 @@ export async function generateAdditionalAction(_prev: FormState, formData: FormD
       subtest_id: x.subtestId,
       tutor_id: x.tutorId,
       room_id: x.roomId,
+      display_label: x.displayLabel ?? null,
     })),
     p_unscheduled: plan.unscheduled,
   });

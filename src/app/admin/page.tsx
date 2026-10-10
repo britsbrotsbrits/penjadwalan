@@ -31,6 +31,7 @@ const SHORTCUTS: readonly Shortcut[] = [
   { href: "/admin/kalender", title: "Kalender", description: "Atur hari aktif dan slot sesi harian.", icon: "calendar", accent: "teal" },
   { href: "/admin/sesi-kurikulum", title: "Sesi & Kurikulum", description: "Atur sesi per hari dan per minggu.", icon: "sliders", accent: "sky" },
   { href: "/admin/distribusi", title: "Distribusi Subtes", description: "Atur jumlah sesi tiap subtes per minggu.", icon: "layers", accent: "orange" },
+  { href: "/admin/pola-sesi", title: "Pola Sesi", description: "Atur sesi tetap SMA dan pola Gap Year (drilling).", icon: "sliders", accent: "teal" },
   { href: "/admin/jadwal", title: "Jadwal", description: "Buat, periksa, dan sesuaikan jadwal per periode.", icon: "calendar", accent: "indigo" },
   { href: "/admin/simulator", title: "Simulator", description: "Uji mesin penjadwalan dengan data simulasi.", icon: "flask", accent: "rose" },
 ];

@@ -247,3 +247,13 @@ Menu **Admin → Mentor** kini punya formulir **Tambah mentor** (nama, email, le
 - Alur: buat akun → profil dijadikan role `tutor` aktif → `admin_update_tutor` mengisi level/rate/dapat-dijadwalkan. Bila langkah setelah pembuatan akun gagal, akun dihapus kembali (rollback).
 - Tanpa email undangan: akun dibuat terkonfirmasi tanpa password; kirim email atur-password lewat **Ubah email**.
 - Tidak ada fitur hapus akun di UI.
+
+## Penjadwalan class-first & pola sesi (Phase 14)
+
+- **Urutan:** jadwal kelas dan distribusi mapel disusun dulu (tanpa melihat mentor), baru mentor dicocokkan (kompeten → tersedia → tidak bentrok → paling pas). Distribusi tidak dikorbankan demi ketersediaan mentor; yang gagal dicocokkan dilaporkan. Sesi satu mentor dalam sehari dibuat berurutan (bobot, di bawah aturan wajib).
+- **Pola Sesi** (`/admin/pola-sesi`): per program atau tipe kelas, mis. Gap Year: 1 Subtes, 2 Drilling, 3 Subtes. **DRILLING** tanpa mentor/ruang, diabaikan presensi & payroll, hanya tampil sebagai "DRILLING".
+- **Hari Tryout** (`/admin/kalender`): hari yang ditandai tidak dijadwalkan sistem dan tampil sebagai "TRYOUT".
+- **Sesi default rombel** (`/admin/rombel`): sesi tetap (mis. kelas 3 SMA sesi 4/5), hari, siklus N minggu (kelas 2: siklus 3, Selasa/Rabu/Jumat) dan tanggal mulai siklus (kosong = minggu pertama periode). Default rombel mengalahkan pola program/tipe kelas.
+- **Label fleksibel:** distribusi "PK/PM" ditulis apa adanya (`teaching_sessions.display_label`).
+- **Batas:** DRILLING/TRYOUT diturunkan saat tampil, tidak disimpan. Rombel tanpa pola berjalan seperti sebelumnya. Periode lama bisa menampilkan pelanggaran `PATTERN_SLOT`/`PATTERN_DAY`/`TRYOUT_DAY` setelah konfigurasi; Generate ulang.
+- Skrip bantu: `supabase/scripts/set_sma_default_sessions.sql` (preview dulu).

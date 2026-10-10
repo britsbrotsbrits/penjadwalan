@@ -12,6 +12,7 @@ export type GridEntry = { date: string; slotNo: number; lines: readonly string[]
 
 export type GridCell =
   | { kind: "session"; lines: string[] }
+  | { kind: "note"; text: string }
   | { kind: "free" }
   | { kind: "empty" }
   | { kind: "outside" };
@@ -36,6 +37,8 @@ export function buildWeekGrid(input: {
   entries: readonly GridEntry[];
   /** Sel hari-sesi saat mentor tersedia; hanya untuk tampilan mentor (tanda √). */
   availableCells?: ReadonlySet<string>;
+  /** Catatan tetap per sel (kunci hari-sesi), mis. DRILLING atau TRYOUT. Sesi nyata menang atas catatan. */
+  notes?: ReadonlyMap<string, string>;
   /** Tanggal di luar rentang ini ditampilkan sebagai "outside" (tanpa √). */
   periodStart?: string;
   periodEnd?: string;
@@ -59,9 +62,29 @@ export function buildWeekGrid(input: {
       const key = cellKey(col.day, slot.slotNo);
       const lines = byCell.get(key);
       if (lines) return { kind: "session", lines };
+      const note = input.notes?.get(key);
+      if (note) return { kind: "note", text: note };
       if (input.availableCells?.has(key)) return { kind: "free" };
       return { kind: "empty" };
     }),
   }));
   return { title: input.title, subtitle: input.subtitle, columns, rows };
+}
+
+/**
+ * Catatan sel untuk tampilan kelas (Phase 14): sesi DRILLING pada tiap hari belajar, dan TRYOUT pada hari
+ * tryout. Hanya untuk rombel yang punya pola sesi. Murni.
+ */
+export function patternNotes(input: {
+  regularDays: readonly number[];
+  tryoutDay: number | null;
+  subtestSlots: readonly number[];
+  drillingSlots: readonly number[];
+}): Map<string, string> {
+  const notes = new Map<string, string>();
+  for (const day of input.regularDays) for (const slot of input.drillingSlots) notes.set(cellKey(day, slot), "DRILLING");
+  if (input.tryoutDay !== null) {
+    for (const slot of [...input.subtestSlots, ...input.drillingSlots]) notes.set(cellKey(input.tryoutDay, slot), "TRYOUT");
+  }
+  return notes;
 }

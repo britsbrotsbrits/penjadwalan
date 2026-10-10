@@ -30,6 +30,13 @@ export type SchedRombel = {
   weeklySessions: number | null;
   /** null = distribusi belum ada. */
   distribution: readonly SchedDistributionItem[] | null;
+  /**
+   * Pola sesi harian (Phase 14). null/tidak ada = rombel dijadwalkan dengan cara lama (sesi bebas).
+   * Ada = kelas-dulu: hanya sesi SUBTEST pada pola yang boleh dipakai, dan jumlah sesi per hari mengikuti pola.
+   */
+  pattern?: { subtestSlots: readonly number[]; drillingSlots: readonly number[] } | null;
+  /** Hari belajar khusus rombel (mis. Selasa/Rabu/Jumat). null/tidak ada = semua hari belajar reguler. */
+  days?: readonly number[] | null;
 };
 
 export type SchedTutor = {
@@ -43,7 +50,10 @@ export type SchedTutor = {
 };
 
 export type SchedulingSnapshot = {
+  /** Hari belajar reguler (hari tryout tidak termasuk). */
   days: readonly number[];
+  /** Hari tryout (bukan hari belajar); hanya untuk tampilan. */
+  tryoutDays?: readonly number[];
   slotNos: readonly number[];
   subtests: readonly SchedSubtest[];
   rooms: readonly SchedRoom[];
@@ -70,6 +80,8 @@ export type ScheduledSession = {
   roomId: string;
   day: number;
   slotNo: number;
+  /** Tulisan di jadwal untuk item fleksibel, mis. "PK/PM". Tidak ada = pakai kode subtes. */
+  label?: string | null;
 };
 
 export type UnscheduledReason =

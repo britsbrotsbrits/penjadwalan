@@ -53,7 +53,7 @@ export async function listCalendarDays(): Promise<CalendarDay[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("calendar_days")
-    .select("day_of_week, is_active")
+    .select("day_of_week, is_active, is_tryout")
     .order("day_of_week", { ascending: true });
   if (error) throw loadFailed("hari aktif");
   return z.array(dayRowSchema).parse(data ?? []);

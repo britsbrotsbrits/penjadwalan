@@ -1,6 +1,6 @@
 import { expandRequirements, type RequirementIssue } from "../scheduler/requirements";
 import { scheduler as defaultScheduler } from "../scheduler/solve";
-import type { SchedulerFn, SchedulingSnapshot, UnscheduledReason } from "../scheduler/types";
+import type { Requirement, ScheduledSession, SchedulerFn, SchedulingSnapshot, UnscheduledReason } from "../scheduler/types";
 import { expandWeeklyPattern, type DatedSession, type RombelWindow } from "../validation/expand";
 
 /**
@@ -33,6 +33,21 @@ export type SchedulePlan = {
   summary: PlanSummary;
 };
 
+/** Tulisan jadwal item fleksibel: kode subtes yang diizinkan digabung, mis. "PK/PM". Item biasa: tidak ada label. */
+export function flexLabels(snapshot: SchedulingSnapshot, requirements: readonly Requirement[]): Map<string, string> {
+  const code = new Map(snapshot.subtests.map((s) => [s.id, s.code] as const));
+  const out = new Map<string, string>();
+  for (const r of requirements) {
+    if (r.allowedSubtestIds.length < 2) continue;
+    out.set(r.id, r.allowedSubtestIds.map((id) => code.get(id) ?? "?").join("/"));
+  }
+  return out;
+}
+
+export function withLabels(scheduled: readonly ScheduledSession[], labels: ReadonlyMap<string, string>): ScheduledSession[] {
+  return scheduled.map((s) => (labels.has(s.requirementId) ? { ...s, label: labels.get(s.requirementId)! } : s));
+}
+
 export function planSchedule(input: {
   snapshot: SchedulingSnapshot;
   seed: number;
@@ -42,7 +57,7 @@ export function planSchedule(input: {
   scheduler?: SchedulerFn;
 }): SchedulePlan {
   const { snapshot, seed } = input;
-  const { requirements, issues } = expandRequirements(snapshot.rombels);
+  const { requirements, issues } = expandRequirements(snapshot.rombels, snapshot.days);
   const run = input.scheduler ?? defaultScheduler;
   const result = run({ snapshot, requirements, seed });
 
@@ -61,7 +76,7 @@ export function planSchedule(input: {
     });
   }
 
-  const sessions = expandWeeklyPattern(result.scheduled, input.periodStart, input.periodEnd, input.windows);
+  const sessions = expandWeeklyPattern(withLabels(result.scheduled, flexLabels(snapshot, requirements)), input.periodStart, input.periodEnd, input.windows);
   const weeklyRequired = requirements.reduce((n, r) => n + r.sessions, 0);
   return {
     sessions,

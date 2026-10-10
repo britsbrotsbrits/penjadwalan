@@ -7,7 +7,7 @@ import type { Requirement, SchedRombel } from "./types";
  * dari total sesi/minggu -> kebutuhan tetap dari distribusi apa adanya, dan selisih dicatat sebagai isu.
  */
 
-export type RequirementIssueCode = "DISTRIBUTION_MISSING" | "DISTRIBUTION_MISMATCH";
+export type RequirementIssueCode = "DISTRIBUTION_MISSING" | "DISTRIBUTION_MISMATCH" | "PATTERN_MISMATCH";
 
 export type RequirementIssue = {
   code: RequirementIssueCode;
@@ -20,7 +20,7 @@ export type ExpandedRequirements = {
   issues: RequirementIssue[];
 };
 
-export function expandRequirements(rombels: readonly SchedRombel[]): ExpandedRequirements {
+export function expandRequirements(rombels: readonly SchedRombel[], regularDays?: readonly number[]): ExpandedRequirements {
   const requirements: Requirement[] = [];
   const issues: RequirementIssue[] = [];
 
@@ -48,6 +48,9 @@ export function expandRequirements(rombels: readonly SchedRombel[]): ExpandedReq
       });
     });
 
+    const pi = patternIssue(rombel, total, regularDays);
+    if (pi) issues.push(pi);
+
     if (rombel.weeklySessions !== null && rombel.weeklySessions !== total) {
       issues.push({
         code: "DISTRIBUTION_MISMATCH",
@@ -58,6 +61,22 @@ export function expandRequirements(rombels: readonly SchedRombel[]): ExpandedReq
   }
 
   return { requirements, issues };
+}
+
+/** Pemeriksaan tambahan (Phase 14): total distribusi vs jumlah sesi subtes yang disediakan pola. */
+function patternIssue(rombel: SchedRombel, total: number, regularDays: readonly number[] | undefined): RequirementIssue | null {
+  if (!rombel.pattern || regularDays === undefined) return null;
+  const dayCount = rombel.days && rombel.days.length > 0 ? regularDays.filter((d) => rombel.days!.includes(d)).length : regularDays.length;
+  const capacity = rombel.pattern.subtestSlots.length * dayCount;
+  if (total === capacity) return null;
+  return {
+    code: "PATTERN_MISMATCH",
+    rombelId: rombel.id,
+    message:
+      total > capacity
+        ? `${rombel.name}: distribusi butuh ${total} sesi per minggu, pola sesi hanya menyediakan ${capacity}. Kelebihan ${total - capacity} tidak bisa dijadwalkan.`
+        : `${rombel.name}: distribusi ${total} sesi per minggu, pola sesi menyediakan ${capacity}. ${capacity - total} sesi subtes dibiarkan kosong.`,
+  };
 }
 
 export function totalRequiredSessions(requirements: readonly Requirement[]): number {

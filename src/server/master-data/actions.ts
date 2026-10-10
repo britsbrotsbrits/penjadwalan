@@ -14,6 +14,7 @@ import {
   slotUpdateSchema,
   subtestCreateSchema,
   subtestUpdateSchema,
+  tryoutDaySchema,
 } from "@/lib/master-data/schemas";
 
 // Setiap mutasi: autentikasi + otorisasi (requireRole) -> validasi Zod -> mutasi (RLS tetap berlaku)
@@ -184,4 +185,20 @@ export async function saveActiveDaysAction(_prev: FormState, formData: FormData)
 
   revalidatePath("/admin/kalender");
   return ok("Hari aktif tersimpan.");
+}
+
+// ---------------------------------------------------------------- hari tryout
+
+export async function saveTryoutDayAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireRole(["admin"]);
+  const parsed = tryoutDaySchema.safeParse({ day: String(formData.get("day") ?? "") });
+  if (!parsed.success) return fail(firstIssueMessage(parsed.error));
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_tryout_day", { p_day: parsed.data.day });
+  if (error) return dbFailure(error, "hari tryout");
+
+  revalidatePath("/admin/kalender");
+  revalidatePath("/admin/jadwal");
+  return ok(parsed.data.day === null ? "Tidak ada hari tryout." : "Hari tryout tersimpan.");
 }

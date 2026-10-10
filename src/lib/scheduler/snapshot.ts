@@ -1,4 +1,5 @@
 import { resolveDistribution, type DistributionItem } from "../config/distribution";
+import { resolvePattern, type PatternItem } from "../config/pattern";
 import { resolveSetting, type SettingRow } from "../config/resolver";
 import type { SchedRombel, SchedulingSnapshot } from "./types";
 
@@ -12,13 +13,23 @@ import type { SchedRombel, SchedulingSnapshot } from "./types";
  */
 
 export type SnapshotInput = {
-  days: ReadonlyArray<{ dayOfWeek: number; isActive: boolean }>;
+  days: ReadonlyArray<{ dayOfWeek: number; isActive: boolean; isTryout?: boolean }>;
   slots: ReadonlyArray<{ slotNo: number; isActive: boolean }>;
   subtests: ReadonlyArray<{ id: string; code: string; isActive: boolean }>;
   rooms: ReadonlyArray<{ id: string; name: string; capacity: number; isActive: boolean }>;
   programs: ReadonlyArray<{ id: string }>;
   classTypes: ReadonlyArray<{ id: string; programId: string; defaultSize: number }>;
-  rombels: ReadonlyArray<{ id: string; name: string; classTypeId: string; fixedRoomId: string | null; isActive: boolean }>;
+  rombels: ReadonlyArray<{
+    id: string;
+    name: string;
+    classTypeId: string;
+    fixedRoomId: string | null;
+    isActive: boolean;
+    /** Sesi default rombel (Phase 14); mengalahkan pola tipe kelas/program. */
+    defaultSlotNo?: number | null;
+    /** Hari belajar default rombel (1..7); null = semua hari belajar. */
+    defaultDays?: readonly number[] | null;
+  }>;
   /** Jumlah siswa aktif per rombel; rombel yang tidak tercantum dianggap 0. */
   activeStudents: ReadonlyArray<{ rombelId: string; activeStudents: number }>;
   tutors: ReadonlyArray<{ id: string; name: string; level: number; isSchedulable: boolean }>;
@@ -26,6 +37,8 @@ export type SnapshotInput = {
   availability: ReadonlyArray<{ tutorId: string; day: number; slotNo: number; available: boolean }>;
   settings: readonly SettingRow[];
   distribution: readonly DistributionItem[];
+  /** Pola sesi harian (Phase 14); kosong = semua rombel dijadwalkan dengan cara lama. */
+  patterns?: readonly PatternItem[];
 };
 
 export type SnapshotIssue = { code: "CONFIG_INVALID" | "CONFIG_MISSING"; rombelId: string; message: string };
@@ -39,6 +52,7 @@ export function buildSnapshot(input: SnapshotInput): BuiltSnapshot {
 
   const subtests = input.subtests.filter((s) => s.isActive).map((s) => ({ id: s.id, code: s.code }));
   const subtestIds = new Set(subtests.map((s) => s.id));
+  const activeSlotNos = new Set(input.slots.filter((x) => x.isActive).map((x) => x.slotNo));
   const rooms = input.rooms.filter((r) => r.isActive).map((r) => ({ id: r.id, name: r.name, capacity: r.capacity }));
 
   const rombels: SchedRombel[] = [];
@@ -58,6 +72,25 @@ export function buildSnapshot(input: SnapshotInput): BuiltSnapshot {
     }
 
     const dist = resolveDistribution(input.distribution, ctx);
+    // Sesi default rombel mengalahkan pola tipe kelas/program.
+    let pattern: { subtestSlots: number[]; drillingSlots: number[] } | null = null;
+    if (r.defaultSlotNo != null) {
+      if (activeSlotNos.has(r.defaultSlotNo)) pattern = { subtestSlots: [r.defaultSlotNo], drillingSlots: [] };
+      else {
+        issues.push({ code: "CONFIG_INVALID", rombelId: r.id, message: `${r.name}: sesi default ${r.defaultSlotNo} tidak aktif di menu Kalender; sesi default diabaikan.` });
+      }
+    }
+    if (!pattern) {
+      const pat = resolvePattern(input.patterns ?? [], ctx);
+      // Pola hanya dipakai bila punya sesi SUBTEST yang aktif di grid.
+      const subtestSlots = pat.status === "found" ? pat.subtestSlots.filter((n) => activeSlotNos.has(n)) : [];
+      if (pat.status === "found" && subtestSlots.length > 0) {
+        pattern = { subtestSlots, drillingSlots: pat.drillingSlots.filter((n) => activeSlotNos.has(n)) };
+      } else if (pat.status === "found") {
+        issues.push({ code: "CONFIG_INVALID", rombelId: r.id, message: `${r.name}: pola sesi tidak punya sesi subtes yang aktif; pola diabaikan.` });
+      }
+    }
+    const rombelDays = r.defaultDays && r.defaultDays.length > 0 ? [...new Set(r.defaultDays)].sort((a, b) => a - b) : null;
     const active = activeCount.get(r.id) ?? 0;
     rombels.push({
       id: r.id,
@@ -65,7 +98,9 @@ export function buildSnapshot(input: SnapshotInput): BuiltSnapshot {
       classTypeId: r.classTypeId,
       studentCount: active > 0 ? active : classType.defaultSize,
       fixedRoomId: r.fixedRoomId,
-      sessionsPerDay: perDay.status === "found" ? perDay.value : null,
+      sessionsPerDay: pattern ? pattern.subtestSlots.length : perDay.status === "found" ? perDay.value : null,
+      pattern,
+      days: rombelDays,
       weeklySessions: weekly.status === "found" ? weekly.value : null,
       distribution:
         dist.status === "found"
@@ -106,7 +141,8 @@ export function buildSnapshot(input: SnapshotInput): BuiltSnapshot {
 
   return {
     snapshot: {
-      days: input.days.filter((d) => d.isActive).map((d) => d.dayOfWeek).sort((a, b) => a - b),
+      days: input.days.filter((d) => d.isActive && !d.isTryout).map((d) => d.dayOfWeek).sort((a, b) => a - b),
+      tryoutDays: input.days.filter((d) => d.isTryout).map((d) => d.dayOfWeek),
       slotNos: input.slots.filter((s) => s.isActive).map((s) => s.slotNo).sort((a, b) => a - b),
       subtests,
       rooms,

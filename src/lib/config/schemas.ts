@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { idSchema } from "../master-data/schemas";
 import { CONFIG_DEFS, SCOPE_TYPES, isConfigKey, type ConfigKey } from "./keys";
+import type { PatternItem } from "./pattern";
 import type { DistributionItem } from "./distribution";
 import type { SettingRow } from "./resolver";
 
@@ -45,6 +46,15 @@ export const distributionRowSchema = z
       sortOrder: r.sort_order,
     }),
   );
+
+export const patternRowSchema = z
+  .object({
+    scope_type: z.enum(["program", "class_type", "rombel"]),
+    scope_id: z.string().uuid(),
+    slot_no: z.number().int(),
+    kind: z.enum(["SUBTEST", "DRILLING"]),
+  })
+  .transform((r): PatternItem => ({ scopeType: r.scope_type, scopeId: r.scope_id, slotNo: r.slot_no, kind: r.kind }));
 
 // ---------------------------------------------------------------- form konfigurasi per scope
 

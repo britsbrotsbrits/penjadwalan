@@ -97,6 +97,11 @@ export const activeDaysSchema = z
   })
   .transform((v) => ({ days: [...new Set(v.days)].sort((a, b) => a - b) }));
 
+/** Hari tryout: kosong = tidak ada hari tryout; selain itu 1 (Senin) sampai 7 (Minggu). */
+export const tryoutDaySchema = z
+  .object({ day: z.string().trim().regex(/^([1-7])?$/, "Hari tryout tidak valid.") })
+  .transform((v) => ({ day: v.day === "" ? null : Number(v.day) }));
+
 export function firstIssueMessage(error: z.ZodError): string {
   return error.issues[0]?.message ?? "Input tidak valid.";
 }
@@ -156,6 +161,7 @@ export const dayRowSchema = z
   .object({
     day_of_week: z.number().int(),
     is_active: z.boolean(),
+    is_tryout: z.boolean().optional().default(false),
   })
-  .transform((r) => ({ dayOfWeek: r.day_of_week, isActive: r.is_active }));
+  .transform((r) => ({ dayOfWeek: r.day_of_week, isActive: r.is_active, isTryout: r.is_tryout }));
 export type CalendarDay = z.output<typeof dayRowSchema>;

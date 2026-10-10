@@ -26,6 +26,8 @@ export type MasterEntity =
   | "presensi"
   | "konfigurasi"
   | "distribusi"
+  | "pola sesi"
+  | "hari tryout"
   | "jadwal"
   | "periode jadwal";
 
@@ -165,6 +167,9 @@ const BY_CONSTRAINT: ReadonlyArray<{ constraint: string; message: string }> = [
   { constraint: "schedule_periods_no_overlap", message: "Rentang tanggal tumpang tindih dengan periode lain yang masih aktif." },
   { constraint: "scheduling_runs_seed_range", message: "Seed harus bilangan bulat 0 sampai 4294967295." },
   { constraint: "unscheduled_missing_range", message: "Data kebutuhan belum terpenuhi tidak valid." },
+  { constraint: "session_pattern_unique_slot", message: "Nomor sesi yang sama muncul lebih dari sekali dalam pola." },
+  { constraint: "calendar_days_one_tryout_key", message: "Hanya satu hari yang boleh menjadi hari tryout." },
+  { constraint: "teaching_sessions_display_label_length", message: "Tulisan jadwal harus 1 sampai 100 karakter." },
   { constraint: "unscheduled_reason_code", message: "Alasan belum terjadwal tidak dikenal." },
 ];
 
@@ -203,6 +208,10 @@ export function mapDbError(error: DbErrorLike, entity: MasterEntity): string {
   if (bad) {
     return `Status ${STATUS_LABEL[bad[1]!] ?? bad[1]} tidak bisa langsung menjadi ${STATUS_LABEL[bad[2]!] ?? bad[2]}.`;
   }
+  if (text.includes("PATTERN_NEEDS_SUBTEST")) return "Pola harus punya minimal satu sesi bertipe Subtes.";
+  if (text.includes("PATTERN_ITEMS_INVALID")) return "Isi pola sesi tidak valid (1 sampai 20 sesi, jenis Subtes atau Drilling).";
+  const patSlot = /PATTERN_SLOT_UNKNOWN:(\d+)/.exec(text);
+  if (patSlot) return `Sesi ${patSlot[1]} belum ada di menu Kalender.`;
   if (text.includes("SCHED_APPROVE_EMPTY")) return "Periode belum punya sesi terjadwal, jadi belum bisa disetujui.";
   const approveViol = /SCHED_APPROVE_VIOLATIONS:(\d+)/.exec(text);
   if (approveViol) return `Jadwal masih punya ${approveViol[1]} pelanggaran aturan dan belum bisa disetujui. Perbaiki dulu.`;

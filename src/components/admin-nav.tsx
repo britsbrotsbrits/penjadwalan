@@ -16,6 +16,7 @@ const GROUPS: ReadonlyArray<{ title: string; icon: IconName; items: readonly Nav
       { href: "/admin/subtes", label: "Subtes" },
       { href: "/admin/sesi-kurikulum", label: "Sesi & Kurikulum" },
       { href: "/admin/distribusi", label: "Distribusi Subtes" },
+      { href: "/admin/pola-sesi", label: "Pola Sesi" },
     ],
   },
   {

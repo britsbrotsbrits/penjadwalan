@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildWeekGrid, cellKey } from "./grid";
+import { buildWeekGrid, cellKey, patternNotes } from "./grid";
 import { clip, escapeXml, gridSvgSize, renderGridSvg } from "./grid-svg";
 
 const slots = [
@@ -102,5 +102,39 @@ describe("week helpers", () => {
   });
   it("label rentang", () => {
     expect(weekRangeLabel("2026-11-02")).toBe("2 Nov 2026 – 8 Nov 2026");
+  });
+});
+
+describe("catatan DRILLING / TRYOUT", () => {
+  it("patternNotes: DRILLING di hari belajar, TRYOUT di semua sesi pola pada hari tryout", () => {
+    const n = patternNotes({ regularDays: [1, 2], tryoutDay: 6, subtestSlots: [1, 3], drillingSlots: [2] });
+    expect(n.get(cellKey(1, 2))).toBe("DRILLING");
+    expect(n.get(cellKey(2, 2))).toBe("DRILLING");
+    expect(n.get(cellKey(1, 1))).toBeUndefined();
+    expect([1, 2, 3].map((s) => n.get(cellKey(6, s)))).toEqual(["TRYOUT", "TRYOUT", "TRYOUT"]);
+    expect(patternNotes({ regularDays: [1], tryoutDay: null, subtestSlots: [4], drillingSlots: [] }).size).toBe(0);
+  });
+  it("sel catatan tampil sebagai note; sesi nyata dan outside menang atas catatan", () => {
+    const notes = new Map([[cellKey(1, 1), "DRILLING"], [cellKey(2, 1), "DRILLING"], [cellKey(3, 1), "DRILLING"]]);
+    const g = buildWeekGrid({
+      ...base,
+      entries: [{ date: "2026-11-03", slotNo: 1, lines: ["PK/PM", "Ajeng"] }],
+      notes,
+      periodStart: "2026-11-02",
+      periodEnd: "2026-11-03",
+    });
+    expect(g.rows[0]!.cells[0]).toEqual({ kind: "note", text: "DRILLING" });
+    expect(g.rows[0]!.cells[1]!.kind).toBe("session");
+    expect(g.rows[0]!.cells[2]!.kind).toBe("outside");
+  });
+  it("SVG memuat tulisan DRILLING dan label fleksibel PK/PM", () => {
+    const g = buildWeekGrid({
+      ...base,
+      entries: [{ date: "2026-11-02", slotNo: 2, lines: ["PK/PM", "Ajeng", "R1"] }],
+      notes: new Map([[cellKey(1, 1), "DRILLING"]]),
+    });
+    const svg = renderGridSvg(g);
+    expect(svg).toContain(">DRILLING<");
+    expect(svg).toContain(">PK/PM<");
   });
 });

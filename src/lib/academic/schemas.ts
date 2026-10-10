@@ -75,6 +75,39 @@ export const rombelUpdateSchema = z
   .object({ id: idSchema, ...rombelFields })
   .refine(datesOrderCheck.check, datesOrderCheck.options);
 
+// ---------------------------------------------------------------- sesi default rombel (Phase 14)
+
+const DAY_VALUES = ["1", "2", "3", "4", "5", "6", "7"];
+
+/**
+ * Sesi default satu rombel: sesi tetap, hari belajar, dan siklus (belajar 1 minggu tiap N minggu).
+ * Kosong = tidak diatur. Jangkar siklus hanya disimpan bila siklus > 1.
+ */
+export const rombelDefaultsSchema = z
+  .object({
+    rombelId: idSchema,
+    slotNo: z
+      .string()
+      .trim()
+      .regex(/^(\d{1,2})?$/, "Sesi default tidak valid.")
+      .transform((v) => (v === "" ? null : Number(v)))
+      .refine((v) => v === null || (v >= 1 && v <= 99), "Sesi default harus antara 1 dan 99."),
+    days: z
+      .array(z.string().refine((d) => DAY_VALUES.includes(d), "Hari tidak valid."))
+      .transform((v) => {
+        const unique = [...new Set(v.map(Number))].sort((a, b) => a - b);
+        return unique.length === 0 ? null : unique;
+      }),
+    cycleWeeks: z
+      .string()
+      .trim()
+      .regex(/^(\d{1,2})?$/, "Siklus minggu tidak valid.")
+      .transform((v) => (v === "" ? 1 : Number(v)))
+      .refine((v) => v >= 1 && v <= 12, "Siklus harus antara 1 dan 12 minggu."),
+    cycleAnchor: optionalDate("Mulai siklus"),
+  })
+  .transform((v) => ({ ...v, cycleAnchor: v.cycleWeeks > 1 ? v.cycleAnchor : null }));
+
 // ---------------------------------------------------------------- siswa
 
 const studentName = z
@@ -163,6 +196,10 @@ export const rombelRowSchema = z
     end_date: z.string().nullable(),
     fixed_room_id: z.string().uuid().nullable(),
     is_active: z.boolean(),
+    default_slot_no: z.number().int().nullable().optional().default(null),
+    default_days: z.array(z.number().int()).nullable().optional().default(null),
+    cycle_weeks: z.number().int().optional().default(1),
+    cycle_anchor: z.string().nullable().optional().default(null),
   })
   .transform((r) => ({
     id: r.id,
@@ -172,6 +209,10 @@ export const rombelRowSchema = z
     endDate: r.end_date,
     fixedRoomId: r.fixed_room_id,
     isActive: r.is_active,
+    defaultSlotNo: r.default_slot_no,
+    defaultDays: r.default_days,
+    cycleWeeks: r.cycle_weeks,
+    cycleAnchor: r.cycle_anchor,
   }));
 export type Rombel = z.output<typeof rombelRowSchema>;
 

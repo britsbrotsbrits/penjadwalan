@@ -4,7 +4,7 @@ import type { Requirement, ScheduledSession, SchedulerFn, SchedulingSnapshot } f
 import { isoDow } from "../validation/dates";
 import { expandWeeklyPattern, type DatedSession, type RombelWindow } from "../validation/expand";
 import { matchFlex, type Slot } from "../validation/weekly-distribution";
-import type { PlanSummary, SchedulePlan, UnscheduledRow } from "./plan";
+import { flexLabels, withLabels, type PlanSummary, type SchedulePlan, type UnscheduledRow } from "./plan";
 
 /**
  * Generate Additional (Phase 11). Murni.
@@ -97,7 +97,7 @@ export function planAdditional(input: {
   scheduler?: SchedulerFn;
 }): AdditionalPlan {
   const { snapshot, seed } = input;
-  const { requirements, issues } = expandRequirements(snapshot.rombels);
+  const { requirements, issues } = expandRequirements(snapshot.rombels, snapshot.days);
   const frozen = patternFromSessions(input.existing);
   const needed = remainingRequirements(requirements, frozen);
   const run = input.scheduler ?? defaultScheduler;
@@ -117,7 +117,7 @@ export function planAdditional(input: {
       detail: u.detail ?? null,
     });
   }
-  const sessions = expandWeeklyPattern(result.scheduled, input.periodStart, input.periodEnd, input.windows);
+  const sessions = expandWeeklyPattern(withLabels(result.scheduled, flexLabels(snapshot, requirements)), input.periodStart, input.periodEnd, input.windows);
   const weeklyRequired = requirements.reduce((n, r) => n + r.sessions, 0);
   const weeklyNeeded = needed.reduce((n, r) => n + r.sessions, 0);
   return {

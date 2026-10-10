@@ -452,7 +452,7 @@ export default async function SchedulePeriodPage({
                 codes={violationsBySession.get(s.id) ?? []}
                 names={{
                   rombel: rombelName.get(s.rombelId) ?? "?",
-                  subtest: subtestName.get(s.subtestId) ?? "?",
+                  subtest: s.displayLabel ? `${s.displayLabel} (${subtestName.get(s.subtestId) ?? "?"})` : (subtestName.get(s.subtestId) ?? "?"),
                   tutor: tutorName.get(s.tutorId) ?? "?",
                   room: roomName.get(s.roomId) ?? "?",
                   slot: slotLabel.get(s.slotNo) ?? `Sesi ${s.slotNo}`,

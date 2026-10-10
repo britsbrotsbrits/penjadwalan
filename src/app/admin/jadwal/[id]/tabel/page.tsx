@@ -4,10 +4,13 @@ import { requireRole } from "@/lib/auth/session";
 import { GridExport } from "@/components/grid-export";
 import { buttonClass, selectClass } from "@/components/form-styles";
 import { Card, PageHeader } from "@/components/ui";
-import { buildWeekGrid, cellKey, type GridEntry } from "@/lib/schedule/grid";
+import { buildWeekGrid, cellKey, patternNotes, type GridEntry } from "@/lib/schedule/grid";
 import { gridSvgSize, renderGridSvg } from "@/lib/schedule/grid-svg";
 import { addDays } from "@/lib/validation/dates";
 import { neighbourWeeks, resolveWeek, weekRangeLabel } from "@/lib/schedule/week";
+import { resolvePattern } from "@/lib/config/pattern";
+import { listSessionPatterns } from "@/server/config/queries";
+import { listClassTypes } from "@/server/academic/queries";
 import { listCalendarDays } from "@/server/master-data/queries";
 import { getPeriod, listPeriodSessions, loadScheduleLookups } from "@/server/schedule/queries";
 import { listAvailability } from "@/server/tutors/queries";
@@ -31,7 +34,13 @@ export default async function ScheduleTablePage({
   const period = await getPeriod(id);
   if (!period) notFound();
 
-  const [sessions, lookups, days] = await Promise.all([listPeriodSessions(id), loadScheduleLookups(), listCalendarDays()]);
+  const [sessions, lookups, days, patterns, classTypes] = await Promise.all([
+    listPeriodSessions(id),
+    loadScheduleLookups(),
+    listCalendarDays(),
+    listSessionPatterns(),
+    listClassTypes(),
+  ]);
   const tutorId = one(sp.tutor);
   const rombelId = one(sp.rombel);
   const week = resolveWeek(one(sp.week), period.startDate, period.endDate);
@@ -42,7 +51,8 @@ export default async function ScheduleTablePage({
   const roomName = new Map(lookups.rooms.map((r) => [r.id, r.name]));
   const subtestCode = new Map(lookups.subtests.map((s) => [s.id, s.code]));
   const slots = lookups.slots.filter((s) => s.isActive).map((s) => ({ slotNo: s.slotNo, label: `${s.startTime}-${s.endTime}` }));
-  const activeDays = days.filter((d) => d.isActive).map((d) => d.dayOfWeek);
+  const activeDays = days.filter((d) => d.isActive && !d.isTryout).map((d) => d.dayOfWeek);
+  const tryoutDay = days.find((d) => d.isTryout)?.dayOfWeek ?? null;
 
   const mode: "mentor" | "kelas" | null = tutorId && tutorName.has(tutorId) ? "mentor" : rombelId && rombelName.has(rombelId) ? "kelas" : null;
 
@@ -57,8 +67,8 @@ export default async function ScheduleTablePage({
       slotNo: s.slotNo,
       lines:
         mode === "mentor"
-          ? [subtestCode.get(s.subtestId) ?? "?", rombelName.get(s.rombelId) ?? "?", roomName.get(s.roomId) ?? "?"]
-          : [subtestCode.get(s.subtestId) ?? "?", tutorName.get(s.tutorId) ?? "?", roomName.get(s.roomId) ?? "?"],
+          ? [s.displayLabel ?? subtestCode.get(s.subtestId) ?? "?", rombelName.get(s.rombelId) ?? "?", roomName.get(s.roomId) ?? "?"]
+          : [s.displayLabel ?? subtestCode.get(s.subtestId) ?? "?", tutorName.get(s.tutorId) ?? "?", roomName.get(s.roomId) ?? "?"],
     }));
     sessionCount = entries.filter((e) => e.date >= week && e.date <= addDays(week, 6)).length;
 
@@ -67,15 +77,33 @@ export default async function ScheduleTablePage({
       const av = await listAvailability(tutorId);
       availableCells = new Set(av.filter((a) => a.available).map((a) => cellKey(a.day, a.slotNo)));
     }
+    // Tampilan kelas: DRILLING pada sesi drilling dan TRYOUT pada hari tryout (hanya bila rombel punya pola/sesi default).
+    let notes: Map<string, string> | undefined;
+    let gridDays = activeDays;
+    if (mode === "kelas") {
+      const rb = lookups.rombels.find((r) => r.id === rombelId);
+      const ct = classTypes.find((c) => c.id === rb?.classTypeId);
+      const pat = rb
+        ? rb.defaultSlotNo != null
+          ? { status: "found" as const, subtestSlots: [rb.defaultSlotNo], drillingSlots: [] as number[] }
+          : resolvePattern(patterns, { rombelId: rb.id, classTypeId: rb.classTypeId, programId: ct?.programId })
+        : { status: "missing" as const };
+      if (pat.status === "found") {
+        const own = rb?.defaultDays && rb.defaultDays.length > 0 ? activeDays.filter((d) => rb.defaultDays!.includes(d)) : activeDays;
+        notes = patternNotes({ regularDays: own, tryoutDay, subtestSlots: pat.subtestSlots, drillingSlots: pat.drillingSlots });
+        if (tryoutDay !== null) gridDays = [...activeDays, tryoutDay].sort((a, b) => a - b);
+      }
+    }
     const name = mode === "mentor" ? tutorName.get(tutorId)! : rombelName.get(rombelId)!;
     const grid = buildWeekGrid({
       title: `${mode === "mentor" ? "Nama Mentor" : "Kelas"} : ${name}`,
       subtitle: `Minggu ${weekRangeLabel(week)} · ${period.name}`,
       weekStart: week,
-      days: activeDays,
+      days: gridDays,
       slots,
       entries,
       availableCells,
+      notes,
       periodStart: period.startDate,
       periodEnd: period.endDate,
     });

@@ -12,6 +12,7 @@ import {
   programCreateSchema,
   programUpdateSchema,
   rombelCreateSchema,
+  rombelDefaultsSchema,
   rombelUpdateSchema,
   studentCreateSchema,
   studentMoveSchema,
@@ -186,6 +187,37 @@ export async function updateRombelAction(_prev: FormState, formData: FormData): 
     [...STRUCTURE_PATHS, "/admin/ruangan"],
     "Tersimpan.",
   );
+}
+
+// ---------------------------------------------------------------- sesi default rombel
+
+/** Sesi default rombel (sesi tetap, hari, siklus). Lewat RPC; admin dicek lagi di database. */
+export async function saveRombelDefaultsAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireRole(["admin"]);
+  const parsed = rombelDefaultsSchema.safeParse({
+    rombelId: String(formData.get("rombelId") ?? ""),
+    slotNo: String(formData.get("slotNo") ?? ""),
+    days: formData.getAll("days").filter((v): v is string => typeof v === "string"),
+    cycleWeeks: String(formData.get("cycleWeeks") ?? ""),
+    cycleAnchor: formData.get("cycleAnchor"),
+  });
+  if (!parsed.success) return fail(firstIssueMessage(parsed.error));
+  const v = parsed.data;
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_rombel_defaults", {
+    p_rombel_id: v.rombelId,
+    p_slot_no: v.slotNo,
+    p_days: v.days,
+    p_cycle_weeks: v.cycleWeeks,
+    p_cycle_anchor: v.cycleAnchor,
+  });
+  if (error) {
+    console.error("[academic:rombel-defaults]", error.code, error.message);
+    return fail(mapDbError(error, "pola sesi"));
+  }
+  for (const path of [...STRUCTURE_PATHS, "/admin/pola-sesi", "/admin/jadwal"]) revalidatePath(path);
+  return ok("Sesi default tersimpan.");
 }
 
 // ---------------------------------------------------------------- siswa

@@ -1,10 +1,11 @@
 import { requireRole } from "@/lib/auth/session";
 import { ActionForm } from "@/components/action-form";
-import { createRowClass, headerCellClass, inputClass, rowClass } from "@/components/form-styles";
+import { createRowClass, headerCellClass, inputClass, rowClass, selectClass } from "@/components/form-styles";
 import { dayName } from "@/lib/master-data/time";
 import {
   createSlotAction,
   saveActiveDaysAction,
+  saveTryoutDayAction,
   updateSlotAction,
 } from "@/server/master-data/actions";
 import { listCalendarDays, listSessionSlots } from "@/server/master-data/queries";
@@ -60,6 +61,29 @@ export default async function KalenderPage() {
               </label>
             ))}
           </div>
+        </ActionForm>
+      </section>
+
+      <section aria-labelledby="hari-tryout" className="rounded border border-current/20 p-4">
+        <h2 id="hari-tryout" className="mb-1 font-medium">
+          Hari tryout
+        </h2>
+        <p className="mb-3 max-w-2xl text-sm opacity-70">
+          Satu hari ditandai tryout (biasanya Sabtu). Hari itu bukan hari belajar reguler: scheduler tidak menjadwalkan
+          kelas di sana, dan tabel jadwal kelas menampilkan TRYOUT pada sesi kelas.
+        </p>
+        <ActionForm action={saveTryoutDayAction} submitLabel="Simpan hari tryout" className="flex flex-col gap-3">
+          <label className="flex max-w-xs flex-col gap-1 text-sm">
+            Hari tryout
+            <select name="day" defaultValue={String(days.find((d) => d.isTryout)?.dayOfWeek ?? "")} className={selectClass}>
+              <option value="">(tidak ada)</option>
+              {days.map((day) => (
+                <option key={day.dayOfWeek} value={day.dayOfWeek}>
+                  {dayName(day.dayOfWeek)}
+                </option>
+              ))}
+            </select>
+          </label>
         </ActionForm>
       </section>
 

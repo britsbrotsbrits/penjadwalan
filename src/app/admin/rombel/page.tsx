@@ -9,8 +9,11 @@ import {
 } from "@/components/form-styles";
 import { buildClassTypeLabels, sizeStatus } from "@/lib/academic/labels";
 import { analyzeFixedRooms, worstSeverity } from "@/lib/rooms/fixed-room";
-import { listRooms } from "@/server/master-data/queries";
-import { createRombelAction, updateRombelAction } from "@/server/academic/actions";
+import { describePattern, resolvePattern } from "@/lib/config/pattern";
+import { dayName } from "@/lib/master-data/time";
+import { listSessionPatterns } from "@/server/config/queries";
+import { listRooms, listSessionSlots } from "@/server/master-data/queries";
+import { createRombelAction, saveRombelDefaultsAction, updateRombelAction } from "@/server/academic/actions";
 import {
   listClassTypes,
   listPrograms,
@@ -28,13 +31,16 @@ const levelClass = {
 
 export default async function RombelPage() {
   await requireRole(["admin"]);
-  const [programs, classTypes, rombels, counts, rooms] = await Promise.all([
+  const [programs, classTypes, rombels, counts, rooms, patterns, slotRows] = await Promise.all([
     listPrograms(),
     listClassTypes(),
     listRombels(),
     listRombelCounts(),
     listRooms(),
+    listSessionPatterns(),
+    listSessionSlots(),
   ]);
+  const activeSlots = slotRows.filter((x) => x.isActive);
 
   const classTypeLabels = buildClassTypeLabels(programs, classTypes);
   const classTypeById = new Map(classTypes.map((c) => [c.id, c]));
@@ -231,6 +237,80 @@ export default async function RombelPage() {
               </ActionForm>
             );
           })}
+        </div>
+      </section>
+
+      <section aria-labelledby="sesi-default" className="flex flex-col gap-3">
+        <div>
+          <h2 id="sesi-default" className="text-lg font-semibold">
+            Sesi default rombel
+          </h2>
+          <p className="max-w-3xl text-sm opacity-70">
+            Jadwal kaku yang tidak boleh berpindah. <strong>Sesi default</strong> = rombel selalu belajar di sesi itu
+            (contoh kelas 3 SMA: General A-E, VVIP A-B, dan Fast Track A selalu Sesi 4, yang lain Sesi 5).{" "}
+            <strong>Hari</strong> = rombel hanya belajar pada hari yang dicentang (kosong = semua hari belajar).{" "}
+            <strong>Siklus</strong> = belajar hanya 1 minggu tiap N minggu (contoh kelas 2 SMA: Selasa, Rabu, Jumat,
+            siklus 3 minggu); isi <strong>Mulai siklus</strong> dengan tanggal di minggu pertama siklus (kosong =
+            minggu pertama periode jadwal). Kosongkan sesi default bila rombel mengikuti pola tipe kelas
+            (menu Pola Sesi, mis. Gap Year). Berlaku untuk Generate berikutnya.
+          </p>
+        </div>
+        <div className="overflow-x-auto">
+          <div className="flex min-w-[78rem] flex-col">
+            {sorted
+              .filter((r) => r.isActive)
+              .map((rombel) => {
+                const classType = classTypeById.get(rombel.classTypeId);
+                const resolved = resolvePattern(patterns, {
+                  rombelId: rombel.id,
+                  classTypeId: rombel.classTypeId,
+                  programId: classType?.programId,
+                });
+                const inherited = rombel.defaultSlotNo === null && resolved.status === "found" ? describePattern(resolved.items) : null;
+                return (
+                  <ActionForm
+                    key={rombel.id}
+                    action={saveRombelDefaultsAction}
+                    submitLabel="Simpan"
+                    className="grid grid-cols-[14rem_11rem_minmax(18rem,1fr)_6rem_10rem_auto] items-center gap-3 border-b border-current/10 py-2"
+                  >
+                    <input type="hidden" name="rombelId" value={rombel.id} />
+                    <span className="text-sm">
+                      {rombel.name}
+                      <span className="block text-xs opacity-60">{classTypeLabels.get(rombel.classTypeId) ?? "?"}</span>
+                    </span>
+                    <label className="flex flex-col gap-1 text-xs">
+                      Sesi default
+                      <select name="slotNo" defaultValue={rombel.defaultSlotNo === null ? "" : String(rombel.defaultSlotNo)} className={selectClass}>
+                        <option value="">{inherited ? `(ikut pola: ${inherited})` : "(tidak diatur)"}</option>
+                        {activeSlots.map((slot) => (
+                          <option key={slot.slotNo} value={slot.slotNo}>
+                            Sesi {slot.slotNo} ({slot.startTime}-{slot.endTime})
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <fieldset className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                      <legend className="mb-1">Hari belajar</legend>
+                      {[1, 2, 3, 4, 5, 6, 7].map((d) => (
+                        <label key={d} className="flex items-center gap-1">
+                          <input name="days" type="checkbox" value={d} defaultChecked={rombel.defaultDays?.includes(d) ?? false} />
+                          {dayName(d)}
+                        </label>
+                      ))}
+                    </fieldset>
+                    <label className="flex flex-col gap-1 text-xs">
+                      Siklus (minggu)
+                      <input name="cycleWeeks" type="number" min={1} max={12} defaultValue={rombel.cycleWeeks} className={inputClass} />
+                    </label>
+                    <label className="flex flex-col gap-1 text-xs">
+                      Mulai siklus
+                      <input name="cycleAnchor" type="date" defaultValue={rombel.cycleAnchor ?? ""} className={inputClass} />
+                    </label>
+                  </ActionForm>
+                );
+              })}
+          </div>
         </div>
       </section>
     </main>

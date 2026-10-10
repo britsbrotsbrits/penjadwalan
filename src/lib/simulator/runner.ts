@@ -69,7 +69,7 @@ export function runSimulation(options: { mode: SimulationMode; seed: number; sch
   const { mode, seed } = options;
   const scheduler = options.scheduler ?? defaultScheduler;
   const { snapshot, notes } = generateScenario(mode, seed);
-  const { requirements, issues } = expandRequirements(snapshot.rombels);
+  const { requirements, issues } = expandRequirements(snapshot.rombels, snapshot.days);
   const feasibility = analyzeFeasibility(snapshot, requirements);
   const schedulerResult = scheduler({ snapshot, requirements, seed });
   const report = evaluateSchedule(snapshot, requirements, schedulerResult);

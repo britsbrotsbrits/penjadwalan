@@ -64,9 +64,11 @@ export function renderGridSvg(grid: WeekGrid): string {
     out.push(`<text x="${PAD + TIME_W / 2}" y="${y + h / 2 + 16}" font-size="12" fill="#334155" text-anchor="middle">${escapeXml(row.label)}</text>`);
     row.cells.forEach((cell, i) => {
       const x = PAD + TIME_W + i * DAY_W;
-      const fill = cell.kind === "session" ? "#dbeafe" : cell.kind === "outside" ? "#e2e8f0" : "#ffffff";
+      const fill = cell.kind === "session" ? "#dbeafe" : cell.kind === "outside" ? "#e2e8f0" : cell.kind === "note" ? "#fef3c7" : "#ffffff";
       out.push(`<rect x="${x}" y="${y}" width="${DAY_W}" height="${h}" fill="${fill}" stroke="#0f172a"/>`);
-      if (cell.kind === "free") {
+      if (cell.kind === "note") {
+        out.push(`<text x="${x + DAY_W / 2}" y="${y + h / 2 + 5}" font-size="14" font-weight="700" letter-spacing="1" fill="#92400e" text-anchor="middle">${escapeXml(clip(cell.text))}</text>`);
+      } else if (cell.kind === "free") {
         out.push(`<text x="${x + DAY_W / 2}" y="${y + h / 2 + 8}" font-size="24" font-weight="700" fill="#15803d" text-anchor="middle">√</text>`);
       } else if (cell.kind === "session") {
         const startY = y + h / 2 - ((cell.lines.length - 1) * LINE_H) / 2 + 5;

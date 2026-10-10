@@ -11,10 +11,11 @@ import {
   type TeachingSession,
   type UnscheduledRequirement,
 } from "@/lib/schedule/schemas";
+import type { RombelWindow } from "@/lib/validation/expand";
 import { buildSnapshot, type BuiltSnapshot } from "@/lib/scheduler/snapshot";
 import type { ViolationCode } from "@/lib/validation/violations";
 import { isViolationCode } from "@/lib/validation/violations";
-import { listSettings, listDistributionItems } from "@/server/config/queries";
+import { listSettings, listDistributionItems, listSessionPatterns } from "@/server/config/queries";
 import { listCalendarDays, listRooms, listSessionSlots, listSubtests } from "@/server/master-data/queries";
 import { listClassTypes, listPrograms, listRombelCounts, listRombels } from "@/server/academic/queries";
 import { listAvailability, listCompetencies, listTutorAccounts, listTutorProfiles } from "@/server/tutors/queries";
@@ -53,7 +54,7 @@ export async function listPeriodSessions(periodId: string): Promise<TeachingSess
   const rows = await fetchAll("sesi jadwal", (from, to) =>
     supabase
       .from("teaching_sessions")
-      .select("id, period_id, session_date, slot_no, rombel_id, subtest_id, tutor_id, room_id, source")
+      .select("id, period_id, session_date, slot_no, rombel_id, subtest_id, tutor_id, room_id, source, display_label")
       .eq("period_id", periodId)
       .eq("status", "SCHEDULED")
       .order("session_date", { ascending: true })
@@ -127,8 +128,8 @@ export async function loadScheduleLookups() {
 }
 
 /** Snapshot nyata untuk scheduler (data aktif saat ini), beserta isu konfigurasi. */
-export async function loadSchedulingSnapshot(): Promise<BuiltSnapshot & { rombelWindows: Map<string, { start: string | null; end: string | null }> }> {
-  const [days, slots, subtests, rooms, programs, classTypes, rombels, counts, tutorProfiles, tutorAccounts, competencies, availability, settings, distribution] =
+export async function loadSchedulingSnapshot(): Promise<BuiltSnapshot & { rombelWindows: Map<string, RombelWindow> }> {
+  const [days, slots, subtests, rooms, programs, classTypes, rombels, counts, tutorProfiles, tutorAccounts, competencies, availability, settings, distribution, patterns] =
     await Promise.all([
       listCalendarDays(),
       listSessionSlots(),
@@ -144,6 +145,7 @@ export async function loadSchedulingSnapshot(): Promise<BuiltSnapshot & { rombel
       listAvailability(),
       listSettings(),
       listDistributionItems(),
+      listSessionPatterns(),
     ]);
   const accountName = new Map(tutorAccounts.map((a) => [a.id, a.fullName]));
 
@@ -166,7 +168,8 @@ export async function loadSchedulingSnapshot(): Promise<BuiltSnapshot & { rombel
     availability,
     settings,
     distribution,
+    patterns,
   });
-  const rombelWindows = new Map(rombels.map((r) => [r.id, { start: r.startDate, end: r.endDate }]));
+  const rombelWindows = new Map(rombels.map((r) => [r.id, { start: r.startDate, end: r.endDate, cycleWeeks: r.cycleWeeks, cycleAnchor: r.cycleAnchor }]));
   return { ...built, rombelWindows };
 }

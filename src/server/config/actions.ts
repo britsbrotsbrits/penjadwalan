@@ -11,6 +11,8 @@ import {
   scopeConfigFormSchema,
   type DistributionFormRow,
 } from "@/lib/config/schemas";
+import { parsePatternForm } from "@/lib/config/pattern-form";
+import { listSessionSlots } from "@/server/master-data/queries";
 import { mapDbError, type DbErrorLike, type MasterEntity } from "@/lib/master-data/db-errors";
 import { fail, ok, type FormState } from "@/lib/master-data/form-state";
 import { firstIssueMessage } from "@/lib/master-data/schemas";
@@ -18,7 +20,7 @@ import { firstIssueMessage } from "@/lib/master-data/schemas";
 // Setiap mutasi: requireRole -> Zod -> RPC (admin dicek lagi di database) -> mapDbError -> revalidate.
 // Penulisan tabel konfigurasi hanya lewat RPC. TODO Phase 17: audit log perubahan konfigurasi.
 
-const PATHS = ["/admin/sesi-kurikulum", "/admin/distribusi"];
+const PATHS = ["/admin/sesi-kurikulum", "/admin/distribusi", "/admin/pola-sesi"];
 
 function dbFailure(error: DbErrorLike, entity: MasterEntity): FormState {
   console.error(`[config:${entity}]`, error.code, error.message);
@@ -142,4 +144,35 @@ export async function clearDistributionAction(_prev: FormState, formData: FormDa
 
   for (const path of PATHS) revalidatePath(path);
   return ok("Distribusi di level ini dihapus; sekarang mewarisi level di atasnya.");
+}
+
+// ---------------------------------------------------------------- pola sesi (Phase 14)
+
+async function activeSlotNos(): Promise<number[]> {
+  return (await listSessionSlots()).filter((x) => x.isActive).map((x) => x.slotNo);
+}
+
+async function writePattern(scopeType: string, scopeId: string, items: Array<{ slot_no: number; kind: string }>): Promise<FormState> {
+  const supabase = await createClient();
+  // Satu RPC = satu transaksi: pola lama diganti seluruhnya atau tidak berubah sama sekali.
+  const { error } =
+    items.length === 0
+      ? await supabase.rpc("clear_session_pattern", { p_scope_type: scopeType, p_scope_id: scopeId })
+      : await supabase.rpc("set_session_pattern", { p_scope_type: scopeType, p_scope_id: scopeId, p_items: items });
+  if (error) return dbFailure(error, "pola sesi");
+  for (const path of PATHS) revalidatePath(path);
+  return ok(items.length === 0 ? "Pola dihapus; kelas ini kembali mengikuti pola induknya." : "Pola sesi tersimpan.");
+}
+
+/** Pola penuh untuk program / tipe kelas: tiap sesi aktif = kosong, Subtes, atau Drilling. */
+export async function savePatternAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireRole(["admin"]);
+  const scope = scopeConfigFormSchema.safeParse({ scopeType: text(formData, "scopeType"), scopeId: text(formData, "scopeId") });
+  if (!scope.success) return fail(firstIssueMessage(scope.error));
+
+  const slots = await activeSlotNos();
+  const values = new Map(slots.map((n) => [n, text(formData, `slot_${n}`)] as const));
+  const parsed = parsePatternForm(slots, values);
+  if (!parsed.ok) return fail(parsed.message);
+  return writePattern(scope.data.scopeType, scope.data.scopeId, parsed.items);
 }

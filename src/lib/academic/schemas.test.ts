@@ -8,6 +8,7 @@ import {
   programUpdateSchema,
   rombelCountRowSchema,
   rombelCreateSchema,
+  rombelDefaultsSchema,
   rombelUpdateSchema,
   studentCreateSchema,
   studentMoveSchema,
@@ -270,5 +271,31 @@ describe("baris DB", () => {
     expect(
       rombelCountRowSchema.safeParse({ rombel_id: ID, active_students: "3", total_students: 5 }).success,
     ).toBe(false);
+  });
+});
+
+describe("rombelDefaultsSchema", () => {
+  const id = "11111111-1111-4111-8111-111111111111";
+  const base = { rombelId: id, slotNo: "4", days: ["5", "2", "3", "2"], cycleWeeks: "3", cycleAnchor: "2026-11-03" };
+  it("kelas 2: sesi 4, Selasa-Rabu-Jumat, tiap 3 minggu; hari dirapikan", () => {
+    const r = rombelDefaultsSchema.parse(base);
+    expect(r.slotNo).toBe(4);
+    expect(r.days).toEqual([2, 3, 5]);
+    expect(r.cycleWeeks).toBe(3);
+    expect(r.cycleAnchor).toBe("2026-11-03");
+  });
+  it("kosong = tidak diatur; siklus 1 membuang jangkar", () => {
+    const r = rombelDefaultsSchema.parse({ rombelId: id, slotNo: "", days: [], cycleWeeks: "", cycleAnchor: "2026-11-03" });
+    expect(r).toEqual({ rombelId: id, slotNo: null, days: null, cycleWeeks: 1, cycleAnchor: null });
+  });
+  it("menolak sesi, hari, siklus, dan tanggal yang tidak valid", () => {
+    expect(rombelDefaultsSchema.safeParse({ ...base, slotNo: "abc" }).success).toBe(false);
+    expect(rombelDefaultsSchema.safeParse({ ...base, slotNo: "0" }).success).toBe(false);
+    expect(rombelDefaultsSchema.safeParse({ ...base, days: ["8"] }).success).toBe(false);
+    expect(rombelDefaultsSchema.safeParse({ ...base, days: ["x"] }).success).toBe(false);
+    expect(rombelDefaultsSchema.safeParse({ ...base, cycleWeeks: "13" }).success).toBe(false);
+    expect(rombelDefaultsSchema.safeParse({ ...base, cycleWeeks: "0" }).success).toBe(false);
+    expect(rombelDefaultsSchema.safeParse({ ...base, cycleAnchor: "2026-02-30" }).success).toBe(false);
+    expect(rombelDefaultsSchema.safeParse({ ...base, rombelId: "x" }).success).toBe(false);
   });
 });

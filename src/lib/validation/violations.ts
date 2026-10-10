@@ -15,6 +15,9 @@ export const VIOLATION_LABELS = {
   DAY_INACTIVE: "Hari ini bukan hari aktif",
   SLOT_INACTIVE: "Sesi ini nonaktif",
   OUT_OF_PERIOD: "Tanggal di luar periode jadwal",
+  TRYOUT_DAY: "Hari ini adalah hari tryout, bukan hari belajar",
+  PATTERN_DAY: "Hari ini bukan hari belajar default rombel",
+  PATTERN_SLOT: "Sesi ini bukan sesi subtes pada pola rombel (sesi tetap rombel)",
 } as const;
 
 export type ViolationCode = keyof typeof VIOLATION_LABELS;

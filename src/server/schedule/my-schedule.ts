@@ -12,6 +12,7 @@ const rowSchema = z
     subtest_name: z.string(),
     room_name: z.string(),
     period_name: z.string(),
+    display_label: z.string().nullable().optional().default(null),
   })
   .transform((r) => ({
     sessionDate: r.session_date,
@@ -21,6 +22,7 @@ const rowSchema = z
     subtestName: r.subtest_name,
     roomName: r.room_name,
     periodName: r.period_name,
+    displayLabel: r.display_label,
   }));
 export type MySession = z.output<typeof rowSchema>;
 

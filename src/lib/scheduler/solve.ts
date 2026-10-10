@@ -1,3 +1,4 @@
+import { sessionValue } from "./priority";
 import { DEFAULT_WEIGHTS, searchPlacement, type Candidate, type SchedulerWeights } from "./candidates";
 import { planRombelCells, type PlannedUnit } from "./classplan";
 import { explainFailure } from "./explain";
@@ -229,7 +230,13 @@ export function createScheduler(options: SchedulerOptions = {}): SchedulerFn {
       }
     }
 
-    // ---- Tahap 3: optimasi jadwal mentor agar berurutan (hanya mengganti mentor, kelas tidak berubah) ----
+    // ---- Tahap 3: optimasi mentor (hanya mengganti mentor, kelas tidak berubah) ----
+    // Nilai tukar = penurunan jeda (berurutan) + selisih prioritas jatah/kuota level. Setiap langkah menaikkan skor total,
+    // jadi selalu berhenti.
+    const valueOf = (tutorId: string, n: number): number => {
+      const q = ctx.tutorQuota.get(tutorId);
+      return q && weights.priority !== 0 ? weights.priority * sessionValue(q, n, weights.load) : -weights.load * n;
+    };
     for (let pass = 0; pass < 4; pass++) {
       let improved = false;
       for (const id of [...state.sessions.keys()].sort((a, b) => a - b)) {
@@ -239,12 +246,14 @@ export function createScheduler(options: SchedulerOptions = {}): SchedulerFn {
         const pos = ctx.slotIndex.get(s0.slotNo) ?? s0.slotNo;
         const listOld = state.tutorDay.get(`${s0.tutorId}|${s0.day}`) ?? [];
         const removeGain = gapsOf(listOld) - gapsOf(listOld.filter((_, i) => i !== listOld.indexOf(pos)));
-        let best: { tutorId: string; delta: number } | null = null;
+        const lostValue = valueOf(s0.tutorId, state.count(state.tutorLoad, s0.tutorId) - 1);
+        let best: { tutorId: string; net: number } | null = null;
         for (const t of ctx.tutorsBySubtest.get(s0.subtestId) ?? []) {
           if (t.id === s0.tutorId || !ctx.tutorCells.get(t.id)?.has(key) || state.tutorAt.has(`${t.id}|${key}`)) continue;
           const delta = state.gapDeltaIfAdd(t.id, s0.day, s0.slotNo) - removeGain;
-          if (delta < 0 && (best === null || delta < best.delta || (delta === best.delta && t.id < best.tutorId))) {
-            best = { tutorId: t.id, delta };
+          const net = -DEFAULT_WEIGHTS.gap * delta + (valueOf(t.id, state.count(state.tutorLoad, t.id)) - lostValue);
+          if (net > 1e-9 && (best === null || net > best.net + 1e-9 || (Math.abs(net - best.net) <= 1e-9 && t.id < best.tutorId))) {
+            best = { tutorId: t.id, net };
           }
         }
         if (best) {

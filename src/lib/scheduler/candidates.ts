@@ -1,3 +1,4 @@
+import { sessionValue } from "./priority";
 import type { Rng } from "./rng";
 import type { SchedContext, ScheduleState } from "./state";
 import type { Requirement } from "./types";
@@ -12,6 +13,8 @@ import type { Requirement } from "./types";
 export type SchedulerWeights = {
   /** Penalti per sesi yang sudah dipegang tutor (pemerataan beban). */
   load: number;
+  /** Bobot prioritas jatah/kuota mentor menurut level (0 = abaikan level). */
+  priority: number;
   /** Penalti per sesi rombel yang sama pada hari itu (sebar sesi antar hari). */
   spread: number;
   /** Penalti per kursi kosong ruangan (hemat ruangan besar untuk kelas besar). */
@@ -30,6 +33,7 @@ export type SchedulerWeights = {
 
 export const DEFAULT_WEIGHTS: SchedulerWeights = {
   load: 1,
+  priority: 1,
   spread: 3,
   roomWaste: 0.05,
   generalist: 0.3,
@@ -75,6 +79,13 @@ export type SearchOptions = {
   /** Batasi pencarian ke satu sel. */
   onlyCell?: string;
 };
+
+/** Skor tutor menurut jatah/kuota; tanpa data kuota kembali ke pemerataan beban biasa. Dikembalikan sebagai PENALTI (dikurangkan). */
+export function priorityTerm(ctx: SchedContext, w: SchedulerWeights, tutorId: string, n: number): number {
+  const q = ctx.tutorQuota.get(tutorId);
+  if (!q || w.priority === 0) return w.load * n;
+  return -w.priority * sessionValue(q, n, w.load);
+}
 
 export function searchPlacement(
   ctx: SchedContext,
@@ -148,7 +159,7 @@ export function searchPlacement(
     for (const o of tutorOptions) {
       const score =
         base -
-        w.load * state.count(state.tutorLoad, o.tutorId) -
+        priorityTerm(ctx, w, o.tutorId, state.count(state.tutorLoad, o.tutorId)) -
         w.generalist * o.competencies -
         w.gap * state.gapDeltaIfAdd(o.tutorId, cell.day, cell.slotNo) -
         w.subtestBalance * state.count(state.rombelSubtest, `${rombel.id}|${o.subtestId}`);

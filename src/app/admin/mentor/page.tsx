@@ -107,8 +107,9 @@ export default async function MentorPage() {
             availability walau belum dapat dijadwalkan.
           </li>
           <li>
-            <strong>Level</strong>: peringkat seniority 0 sampai 99 (makin tinggi makin senior). Seniority hanya
-            preferensi lunak, bukan batas; bobotnya diatur di konfigurasi akademik (phase berikutnya).
+            <strong>Level</strong>: peringkat seniority 0 sampai 99 (makin tinggi makin senior). Menentukan jatah sesi
+            per minggu: setiap mentor dapat dulu 20% dari sesi yang dicentang, lalu mentor level tinggi diisi sampai
+            kuota (sesi dicentang x level / 100). Kuota bersifat lunak: bisa dilewati bila kebutuhan kelas tidak muat.
           </li>
           <li>
             <strong>Rate</strong>: Rupiah per sesi, angka bulat tanpa titik. Kosong berarti belum diisi.

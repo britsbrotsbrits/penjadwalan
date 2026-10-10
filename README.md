@@ -257,3 +257,5 @@ Menu **Admin → Mentor** kini punya formulir **Tambah mentor** (nama, email, le
 - **Label fleksibel:** distribusi "PK/PM" ditulis apa adanya (`teaching_sessions.display_label`).
 - **Batas:** DRILLING/TRYOUT diturunkan saat tampil, tidak disimpan. Rombel tanpa pola berjalan seperti sebelumnya. Periode lama bisa menampilkan pelanggaran `PATTERN_SLOT`/`PATTERN_DAY`/`TRYOUT_DAY` setelah konfigurasi; Generate ulang.
 - Skrip bantu: `supabase/scripts/set_sma_default_sessions.sql` (preview dulu).
+
+- **Prioritas level mentor:** jatah dasar = 20% dari sesi yang dicentang (dibulatkan ke atas), semua mentor dapat dulu. Setelah itu mentor level tinggi diisi sampai kuota = sesi dicentang x level / 100 (minimal jatah dasar; level 0 = jatah dasar saja). Kuota lunak: boleh dilewati agar distribusi kelas tetap utuh. Dihitung per minggu pada pola mingguan; tahap optimasi mentor juga mempertimbangkannya bersama jeda.

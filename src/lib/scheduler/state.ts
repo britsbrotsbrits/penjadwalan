@@ -1,3 +1,4 @@
+import { computeQuota, type TutorQuota } from "./priority";
 import type { Requirement, SchedRombel, SchedRoom, SchedTutor, ScheduledSession, SchedulingSnapshot } from "./types";
 
 /**
@@ -25,6 +26,8 @@ export type SchedContext = {
   allowedCells: Map<string, Set<string>>;
   /** Posisi (indeks) tiap nomor sesi pada grid, untuk menghitung jeda mentor. */
   slotIndex: Map<number, number>;
+  /** Jatah dasar dan kuota sesi per minggu tiap mentor (dari level dan jumlah centang). */
+  tutorQuota: Map<string, TutorQuota>;
 };
 
 export function buildContext(snapshot: SchedulingSnapshot, requirements: readonly Requirement[]): SchedContext {
@@ -43,6 +46,8 @@ export function buildContext(snapshot: SchedulingSnapshot, requirements: readonl
       tutorsBySubtest.set(sub, list);
     }
   }
+  const tutorQuota = new Map<string, TutorQuota>();
+  for (const t of snapshot.tutors) tutorQuota.set(t.id, computeQuota(tutorCells.get(t.id)?.size ?? 0, t.level));
   const cells = snapshot.days.flatMap((day) => snapshot.slotNos.map((slotNo) => ({ day, slotNo, key: cellKey(day, slotNo) })));
   const roomsByCapacity = [...snapshot.rooms].sort((a, b) => a.capacity - b.capacity || a.id.localeCompare(b.id));
   const slotIndex = new Map(snapshot.slotNos.map((n, i) => [n, i] as const));
@@ -66,6 +71,7 @@ export function buildContext(snapshot: SchedulingSnapshot, requirements: readonl
     patternCells,
     allowedCells,
     slotIndex,
+    tutorQuota,
     reqById: new Map(requirements.map((r) => [r.id, r])),
     rombelById: new Map(snapshot.rombels.map((r) => [r.id, r])),
     tutorById: new Map(snapshot.tutors.map((t) => [t.id, t])),

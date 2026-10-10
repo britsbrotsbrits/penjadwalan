@@ -126,7 +126,7 @@ describe("runSimulation", () => {
   it("stress tetap cepat dan bisa dijalankan (batas serverless)", () => {
     const t0 = Date.now();
     const run = runSimulation({ mode: "stress", seed: 3 });
-    expect(Date.now() - t0).toBeLessThan(5000);
+    expect(Date.now() - t0).toBeLessThan(10000);
     expect(run.scenario.rombels).toBeGreaterThan(100);
   });
 

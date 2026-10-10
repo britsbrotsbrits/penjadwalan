@@ -44,7 +44,7 @@ export const DEFAULT_WEIGHTS: SchedulerWeights = {
   compact: 0.02,
   subtestBalance: 1,
   gap: 2.5,
-  sameClassDay: 5,
+  sameClassDay: 30,
   dayExclusion: 6,
   tieEpsilon: 0.5,
 };

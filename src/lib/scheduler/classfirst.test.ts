@@ -418,7 +418,7 @@ describe("mentor tidak mengajar rombel yang sama dua kali sehari (mutasi yang ha
     return total;
   };
   it("dengan aturan: tidak ada mentor yang dobel di rombel yang sama pada hari yang sama", () => {
-    expect(dups({ sameClassDay: 5 })).toBe(0);
+    expect(dups({ sameClassDay: 30 })).toBe(0);
   });
   it("tanpa aturan: dobel terjadi (aturan benar-benar bekerja)", () => {
     expect(dups({ sameClassDay: 0 })).toBeGreaterThan(0);

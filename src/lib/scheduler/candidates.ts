@@ -29,6 +29,8 @@ export type SchedulerWeights = {
   gap: number;
   /** Penalti bila mentor yang sama mengajar rombel yang sama lebih dari sekali pada hari itu (aturan lunak). */
   sameClassDay: number;
+  /** Penalti bila mentor SUDAH pernah mengajar rombel itu dalam seminggu (sebar mentor ke banyak rombel; aturan lunak). */
+  rombelSpread: number;
   /** Penalti per sesi rombel pada hari itu yang subtesnya berpasangan terlarang dengan subtes ini (aturan lunak). */
   dayExclusion: number;
   /** Selisih skor yang masih dianggap setara; pemenang dipilih acak berseed di antaranya. */
@@ -45,6 +47,7 @@ export const DEFAULT_WEIGHTS: SchedulerWeights = {
   subtestBalance: 1,
   gap: 2.5,
   sameClassDay: 30,
+  rombelSpread: 15,
   dayExclusion: 6,
   tieEpsilon: 0.5,
 };
@@ -178,6 +181,7 @@ export function searchPlacement(
         priorityTerm(ctx, w, o.tutorId, state.count(state.tutorLoad, o.tutorId)) -
         w.generalist * o.competencies -
         w.gap * state.gapDeltaIfAdd(o.tutorId, cell.day, cell.slotNo) -
+        w.rombelSpread * Math.min(1, state.count(state.tutorRombel, `${o.tutorId}|${rombel.id}`)) -
         w.sameClassDay * state.count(state.tutorRombelDay, `${o.tutorId}|${rombel.id}|${cell.day}`) -
         w.dayExclusion * exclusionClashes(ctx, state, rombel.id, cell.day, o.subtestId) -
         w.subtestBalance * state.count(state.rombelSubtest, `${rombel.id}|${o.subtestId}`);

@@ -255,7 +255,9 @@ export function createScheduler(options: SchedulerOptions = {}): SchedulerFn {
           const sameNew = state.count(state.tutorRombelDay, `${t.id}|${s0.rombelId}|${s0.day}`);
           const net =
             -DEFAULT_WEIGHTS.gap * delta +
-            DEFAULT_WEIGHTS.sameClassDay * (sameOld - sameNew) +
+            weights.sameClassDay * (sameOld - sameNew) +
+            weights.rombelSpread *
+              (Math.min(1, state.count(state.tutorRombel, `${s0.tutorId}|${s0.rombelId}`) - 1) - Math.min(1, state.count(state.tutorRombel, `${t.id}|${s0.rombelId}`))) +
             (valueOf(t.id, state.count(state.tutorLoad, t.id)) - lostValue);
           if (net > 1e-9 && (best === null || net > best.net + 1e-9 || (Math.abs(net - best.net) <= 1e-9 && t.id < best.tutorId))) {
             best = { tutorId: t.id, net };

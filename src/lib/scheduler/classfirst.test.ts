@@ -424,3 +424,43 @@ describe("mentor tidak mengajar rombel yang sama dua kali sehari (mutasi yang ha
     expect(dups({ sameClassDay: 0 })).toBeGreaterThan(0);
   });
 });
+
+describe("mentor disebar ke banyak rombel (aturan lunak, mutasi yang harus tertangkap)", () => {
+  const six = [1, 2, 3, 4, 5, 6];
+  const subs = ["pk", "pu", "pm", "ppu", "kmm", "lbi", "lbe"];
+  const rnd = (seed: number) => {
+    let x = (seed * 2654435761) >>> 0;
+    return () => {
+      x ^= x << 13; x >>>= 0; x ^= x >>> 17; x ^= x << 5; x >>>= 0;
+      return x / 4294967296;
+    };
+  };
+  const repeats = (rombelSpread: number) => {
+    let total = 0;
+    for (let seed = 1; seed <= 8; seed++) {
+      const r = rnd(seed + 100);
+      const rombels = Array.from({ length: 10 }, (_, i) =>
+        rombel(`g${i}`, [1, 3], subs.map((c) => ({ subtestId: c, flexibleSubtestIds: [], label: null, sessionsPerWeek: 1 + (r() < 0.5 ? 1 : 0) })), { sessionsPerDay: 2, pattern: { subtestSlots: [1, 3], drillingSlots: [2] } }),
+      );
+      const levels = [20, 40, 60, 80, 99];
+      const tutors = Array.from({ length: 21 }, (_, i) => ({
+        id: `t${i}`, name: `t${i}`, level: levels[i % 5]!,
+        competencies: subs.filter(() => r() < 0.45),
+        availability: six.flatMap((day) => [1, 2, 3, 4, 5].filter(() => r() < 0.7).map((slotNo) => ({ day, slotNo }))),
+      }));
+      const s = snap(rombels, tutors, { days: six, subtests: subs.map((c) => ({ id: c, code: c.toUpperCase() })) });
+      const { requirements } = expandRequirements(s.rombels, s.days);
+      const res = createScheduler({ weights: { rombelSpread } })({ snapshot: s, requirements, seed });
+      const m = new Map<string, number>();
+      for (const x of res.scheduled) m.set(`${x.tutorId}|${x.rombelId}`, (m.get(`${x.tutorId}|${x.rombelId}`) ?? 0) + 1);
+      for (const n of m.values()) if (n > 1) total += n - 1;
+    }
+    return total;
+  };
+  it("dengan aturan: pengulangan mentor di rombel yang sama jauh lebih sedikit daripada tanpa aturan", () => {
+    const off = repeats(0);
+    const on = repeats(25);
+    expect(off).toBeGreaterThan(8);
+    expect(on).toBeLessThanOrEqual(off / 2);
+  });
+});

@@ -100,6 +100,8 @@ export class ScheduleState {
   rombelDaySubtest = new Map<string, number>();
   /** Jumlah sesi satu mentor pada satu rombel di satu hari (kunci mentor|rombel|hari). */
   tutorRombelDay = new Map<string, number>();
+  /** Jumlah sesi satu mentor pada satu rombel dalam seminggu (kunci mentor|rombel). */
+  tutorRombel = new Map<string, number>();
   byCell = new Map<string, Set<number>>();
   /** Posisi sesi (indeks grid) yang dipegang tiap mentor pada tiap hari, terurut. Kunci: tutorId|day. */
   tutorDay = new Map<string, number[]>();
@@ -122,6 +124,7 @@ export class ScheduleState {
     bump(this.perRequirement, s.requirementId, 1);
     bump(this.rombelDaySubtest, `${s.rombelId}|${s.day}|${s.subtestId}`, 1);
     bump(this.tutorRombelDay, `${s.tutorId}|${s.rombelId}|${s.day}`, 1);
+    bump(this.tutorRombel, `${s.tutorId}|${s.rombelId}`, 1);
     this.addTutorDay(s);
     const set = this.byCell.get(cell) ?? new Set<number>();
     set.add(id);
@@ -143,6 +146,7 @@ export class ScheduleState {
     bump(this.perRequirement, s.requirementId, -1);
     bump(this.rombelDaySubtest, `${s.rombelId}|${s.day}|${s.subtestId}`, -1);
     bump(this.tutorRombelDay, `${s.tutorId}|${s.rombelId}|${s.day}`, -1);
+    bump(this.tutorRombel, `${s.tutorId}|${s.rombelId}`, -1);
     this.removeTutorDay(s);
     this.byCell.get(cell)?.delete(id);
     return s;

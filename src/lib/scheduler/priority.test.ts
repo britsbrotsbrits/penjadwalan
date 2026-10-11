@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { computeQuota, sessionValue } from "./priority";
 import { expandRequirements } from "./requirements";
-import { scheduler } from "./solve";
+import { createScheduler } from "./solve";
+
+// Aturan penyebaran rombel dimatikan di sini supaya yang diuji murni prioritas level (kedua aturan dapat bertentangan pada skenario kecil).
+const scheduler = createScheduler({ weights: { rombelSpread: 0 } });
 import type { SchedRombel, SchedTutor, SchedulingSnapshot } from "./types";
 
 const DAYS = [1, 2, 3, 4, 5];
